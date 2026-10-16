@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block title %}Cargo History{% endblock%}
+
+{% block styles %}
+
+<link rel="stylesheet" href="{% static 'css/cargo_form.css' %}">
+
+<link rel="stylesheet" href="{% static 'css/mobile_data_views.css' %}">
+
+{% endblock %}
+
+
+
+{% block main %}
+
+    <!-- Hero Section -->
+
+    <div data-controller="history" data-history-entries-url-value="{% url 'booking-history' %}">
+
+        <section class="hero-section py-5">
+
+            <div class="container-xxl">
+
+                <div class="mb-5">
+
+                
+
+                    <div class="card p-4 mx-auto d-none d-md-block" style="width: 100%;" data-history-target="tableContainer">
+
+                        <table class="table" data-history-target="table" >
+
+                            <thead>
+
+                                <tr>
+
+                                    <th>Origin</th>
+
+                                    <th>Destination</th>
+
+                                    <th>Time Arrived</th>
+
+                                    <th>Service Schedule</th>
+
+                                    <th>Vehicle</th>
+
+                                    <th>Plate Number</th>
+
+                                    <th>Subsidy Amount</th>
+
+                                    <th>Amount Released</th>
+
+                                </tr>
+
+                            </thead>
+
+                            <tbody></tbody>
+
+                        </table>
+
+                    </div>
+
+
+
+                    <div class="d-block d-md-none mt-4" data-history-target="mobileContainer">
+
+
+
+                    </div>
+
+
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </div>
+
+
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script src="{% static 'js/history.js' %}" type="module"></script>
+
+{% endblock %}

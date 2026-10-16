@@ -1,0 +1,691 @@
+/* Custom CSS Variables */
+
+:root {
+
+  --bs-body-font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+
+  --bs-font-monospace: 'IBM Plex Mono', 'Courier New', monospace;
+
+}
+
+
+
+/* Base Styles */
+
+body {
+
+  font-family: var(--bs-body-font-family);
+
+  -webkit-font-smoothing: antialiased;
+
+  -moz-osx-font-smoothing: grayscale;
+
+}
+
+
+
+.font-monospace {
+
+  font-family: var(--bs-font-monospace);
+
+}
+
+
+
+html {
+
+  scroll-behavior: smooth;
+
+}
+
+
+
+/* Brand Logo */
+
+.brand-logo {
+
+  width: 32px;
+
+  height: 32px;
+
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+
+  border-radius: 0.5rem;
+
+  display: flex;
+
+  align-items: left;
+
+  justify-content: left;
+
+}
+
+
+
+/* Hero Section */
+
+.hero-section {
+
+  background: linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%);
+
+}
+
+
+
+.live-indicator {
+
+  width: 8px;
+
+  height: 8px;
+
+  background-color: #059669;
+
+  border-radius: 50%;
+
+  animation: pulse 2s infinite;
+
+}
+
+
+
+@keyframes pulse {
+
+  0%, 100% {
+
+    opacity: 1;
+
+  }
+
+  50% {
+
+    opacity: 0.5;
+
+  }
+
+}
+
+
+
+/* Search Input */
+
+.search-input {
+
+  height: 3.5rem;
+
+  padding-left: 3.5rem;
+
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+
+}
+
+
+
+.search-input:focus {
+
+  border-color: #059669;
+
+  box-shadow: 0 0 0 0.25rem rgba(5, 150, 105, 0.25);
+
+}
+
+
+
+/* Stat Cards */
+
+.stat-card {
+
+  border: 1px solid #e9ecef;
+
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+
+  transition: all 0.3s ease;
+
+}
+
+
+
+.stat-card:hover {
+
+  transform: translateY(-2px);
+
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+}
+
+
+
+/* Filter Chips */
+
+.filter-chip {
+
+  padding: 0.5rem 1rem;
+
+  font-size: 0.875rem;
+
+  font-weight: 500;
+
+  color: #6c757d;
+
+  background-color: #ffffff;
+
+  border: 1px solid #dee2e6;
+
+  border-radius: 50rem;
+
+  cursor: pointer;
+
+  transition: all 0.2s ease;
+
+}
+
+
+
+.filter-chip:hover {
+
+  background-color: #f8f9fa;
+
+  border-color: #adb5bd;
+
+}
+
+
+
+.filter-chip.active {
+
+  background-color: #059669;
+
+  color: #ffffff;
+
+  border-color: #059669;
+
+}
+
+
+
+.filter-chip.active:hover {
+
+  background-color: #047857;
+
+  border-color: #047857;
+
+}
+
+
+
+/* Action Buttons */
+
+.action-btn {
+
+  display: inline-flex;
+
+  align-items: center;
+
+  gap: 0.5rem;
+
+}
+
+
+
+/* Table Styles */
+
+.table thead th {
+
+  font-size: 0.75rem;
+
+  font-weight: 600;
+
+  text-transform: uppercase;
+
+  letter-spacing: 0.05em;
+
+  color: #6c757d;
+
+  background-color: #f8f9fa;
+
+  border-bottom: 2px solid #dee2e6;
+
+  padding: 1rem 1.5rem;
+
+}
+
+
+
+.table tbody td {
+
+  padding: 1rem 1.5rem;
+
+  vertical-align: left;
+
+}
+
+
+
+.table tbody tr {
+
+  transition: background-color 0.15s ease;
+
+}
+
+
+
+.table tbody tr:hover {
+
+  background-color: #f8f9fa;
+
+}
+
+
+
+.sortable {
+
+  cursor: pointer;
+
+  user-select: none;
+
+}
+
+
+
+.sortable:hover {
+
+  background-color: #e9ecef !important;
+
+}
+
+
+
+.sortable.sort-asc i::before {
+
+  content: "\f148";
+
+  color: #059669;
+
+}
+
+
+
+.sortable.sort-desc i::before {
+
+  content: "\f149";
+
+  color: #059669;
+
+}
+
+
+
+/* User Avatar */
+
+.user-avatar {
+
+  width: 32px;
+
+  height: 32px;
+
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+
+  border-radius: 50%;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  color: #ffffff;
+
+  font-size: 0.75rem;
+
+  font-weight: 600;
+
+}
+
+
+
+/* Status Badges */
+
+.badge {
+
+  padding: 0.375rem 0.75rem;
+
+  font-size: 0.75rem;
+
+  font-weight: 500;
+
+  text-transform: capitalize;
+
+}
+
+
+
+.status-active {
+
+  background-color: #d1fae5;
+
+  color: #065f46;
+
+}
+
+
+
+.status-pending {
+
+  background-color: #fef3c7;
+
+  color: #92400e;
+
+}
+
+
+
+.status-completed {
+
+  background-color: #dbeafe;
+
+  color: #1e40af;
+
+}
+
+
+
+/* Action Icons */
+
+.action-icon {
+
+  padding: 0.375rem 0.5rem;
+
+  border: none;
+
+  background-color: transparent;
+
+}
+
+
+
+.action-icon:hover {
+
+  background-color: #f8f9fa;
+
+}
+
+
+
+/* Pagination */
+
+.pagination-btn {
+
+  min-width: 40px;
+
+  height: 40px;
+
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+}
+
+
+
+.pagination-btn.active {
+
+  background-color: #059669;
+
+  border-color: #059669;
+
+  color: #ffffff;
+
+}
+
+
+
+.pagination-btn.active:hover {
+
+  background-color: #047857;
+
+  border-color: #047857;
+
+}
+
+
+
+/* Mobile Cards */
+
+.mobile-card {
+
+  border: 1px solid #dee2e6;
+
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+
+  transition: all 0.3s ease;
+
+}
+
+
+
+.mobile-card:hover {
+
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+
+}
+
+
+
+/* Feature Cards */
+
+.feature-card {
+
+  border: 1px solid #dee2e6;
+
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+
+  transition: all 0.3s ease;
+
+}
+
+
+
+.feature-card:hover {
+
+  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+
+  border-color: #adb5bd;
+
+  transform: translateY(-4px);
+
+}
+
+
+
+.feature-icon {
+
+  width: 48px;
+
+  height: 48px;
+
+  border-radius: 0.75rem;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+}
+
+
+
+/* Responsive Icons */
+
+.responsive-icon {
+
+  width: 40px;
+
+  height: 40px;
+
+  border-radius: 0.5rem;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  font-size: 1.25rem;
+
+}
+
+
+
+/* Responsive Demo Placeholder */
+
+.responsive-demo-placeholder {
+
+  aspect-ratio: 4/3;
+
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+
+  border-radius: 0.75rem;
+
+}
+
+
+
+/* Custom Scrollbar */
+
+::-webkit-scrollbar {
+
+  width: 8px;
+
+  height: 8px;
+
+}
+
+
+
+::-webkit-scrollbar-track {
+
+  background: #f8f9fa;
+
+}
+
+
+
+::-webkit-scrollbar-thumb {
+
+  background: #adb5bd;
+
+  border-radius: 4px;
+
+}
+
+
+
+::-webkit-scrollbar-thumb:hover {
+
+  background: #6c757d;
+
+}
+
+
+
+/* Focus Styles */
+
+*:focus-visible {
+
+  outline: 2px solid #059669;
+
+  outline-offset: 2px;
+
+}
+
+
+
+/* Selection */
+
+::selection {
+
+  background-color: #d1fae5;
+
+  color: #1c1917;
+
+}
+
+
+
+/* Responsive Adjustments */
+
+@media (max-width: 991.98px) {
+
+  .table thead th,
+
+  .table tbody td {
+
+    padding: 0.75rem 1rem;
+
+  }
+
+}
+
+
+
+@media (max-width: 767.98px) {
+
+  .mobile-card {
+
+    padding: 1.25rem;
+
+  }
+
+  
+
+  .stat-card .card-body {
+
+    padding: 0.75rem !important;
+
+  }
+
+}
+
+
+
+/* Animation Utilities */
+
+.transition-smooth {
+
+  transition: all 300ms cubic-bezier(0.16, 1, 0.3, 1);
+
+}
+
+
+
+/* Shimmer Loading Effect */
+
+@keyframes shimmer {
+
+  0% {
+
+    background-position: -1000px 0;
+
+  }
+
+  100% {
+
+    background-position: 1000px 0;
+
+  }
+
+}
+
+
+
+.shimmer {
+
+  background: linear-gradient(90deg, #f8f9fa 0%, #e9ecef 50%, #f8f9fa 100%);
+
+  background-size: 1000px 100%;
+
+  animation: shimmer 2s infinite;
+
+}

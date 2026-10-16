@@ -1,0 +1,387 @@
+{% load static %}
+
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Registration Form</title>
+
+    <style>
+
+        /* General Page Styling */
+
+        body {
+
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+
+            background-color: #f4f7f6;
+
+            display: flex;
+
+            justify-content: center;
+
+            align-items: center;
+
+            height: 100vh;
+
+            margin: 0;
+
+        }
+
+
+
+        /* Form Container */
+
+        .registration-container {
+
+            background-color: #ffffff;
+
+            padding: 40px;
+
+            border-radius: 12px;
+
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+
+            width: 100%;
+
+            max-width: 400px;
+
+            text-align: center;
+
+        }
+
+
+
+        /* Logo Styling */
+
+        .logo-container {
+
+            margin-bottom: 25px;
+
+        }
+
+
+
+        .logo-container img {
+
+            max-width: 120px; /* Adjust size as needed */
+
+            height: auto;
+
+        }
+
+
+
+        h2 {
+
+            margin-bottom: 25px;
+
+            color: #333;
+
+            font-size: 24px;
+
+        }
+
+
+
+        /* Input Group Styling */
+
+        .input-group {
+
+            text-align: left;
+
+            margin-bottom: 20px;
+
+        }
+
+
+
+        .input-group label {
+
+            display: block;
+
+            font-size: 14px;
+
+            margin-bottom: 8px;
+
+            color: #666;
+
+        }
+
+
+
+        .input-group input {
+
+            width: 100%;
+
+            padding: 12px 15px;
+
+            border: 1px solid #ddd;
+
+            border-radius: 6px;
+
+            font-size: 16px;
+
+            box-sizing: border-box; /* Ensures padding doesn't affect width */
+
+            transition: border-color 0.3s ease;
+
+        }
+
+
+
+        .input-group input:focus {
+
+            outline: none;
+
+            border-color: #4A90E2;
+
+        }
+
+
+
+        /* Button Styling */
+
+        .submit-btn {
+
+            width: 100%;
+
+            padding: 14px;
+
+            background-color: #4A90E2;
+
+            color: white;
+
+            border: none;
+
+            border-radius: 6px;
+
+            font-size: 18px;
+
+            cursor: pointer;
+
+            transition: background-color 0.3s ease;
+
+        }
+
+
+
+        .submit-btn:hover {
+
+            background-color: #357ABD;
+
+        }
+
+
+
+        /* Footer Text */
+
+        .footer-text {
+
+            margin-top: 20px;
+
+            font-size: 14px;
+
+            color: #777;
+
+        }
+
+
+
+        .footer-text a {
+
+            color: #4A90E2;
+
+            text-decoration: none;
+
+        }
+
+
+
+        .footer-text a:hover {
+
+            text-decoration: underline;
+
+        }
+
+    </style>
+
+
+
+    <link rel="stylesheet" href="{% static 'bs/css/bootstrap.min.css' %}">
+
+    <link rel="stylesheet" href="{% static 'css/toast.css' %}">
+
+</head>
+
+<body>
+
+
+
+<div class="registration-container" data-controller="register">
+
+    <!-- 1. Logo Above the Form -->
+
+    <div class="logo-container">
+
+        <!-- Replace 'your-logo.png' with your actual logo URL -->
+
+        <!-- <img src="https://via.placeholder.com/150x50?text=YOUR+LOGO" alt="Company Logo"> -->
+
+        <img src="{% static 'img/cargo_logo.png'%}" alt="Logo" class="logo-image" style="width:70%;">
+
+    </div>
+
+
+
+    <h2>Create an Account</h2>
+
+
+
+    <form method="POST" data-action="submit->register#registerLeader">
+
+        {% csrf_token %}
+
+         <div class="input-group" >
+
+            {{form.go_group_id.label}}
+
+            {{form.go_group_id}}
+
+            <div data-register-target="gogroupidErrors">
+
+
+
+            </div>
+
+        </div>
+
+        <div class="input-group">
+
+            {{form.email.label}}
+
+            {{form.email}}
+
+             <div data-register-target="emailErrors">
+
+
+
+            </div>
+
+        </div>
+
+
+
+        <div class="input-group">
+
+            {{form.first_name.label}}
+
+            {{form.first_name}}
+
+            <div data-register-target="firstnameErrors">
+
+
+
+            </div>
+
+        </div>
+
+
+
+        <div class="input-group"  >
+
+            {{form.last_name.label}}
+
+            {{form.last_name}}
+
+            <div data-register-target="lastnameErrors">
+
+
+
+            </div>
+
+        </div>
+
+
+
+        <div class="input-group">
+
+            {{form.password1.label}}
+
+            {{form.password1}}
+
+            <div data-register-target="password1Errors">
+
+
+
+            </div>
+
+        </div>
+
+
+
+        <div class="input-group">
+
+            {{form.password2.label}}
+
+            {{form.password2}}
+
+            <div data-register-target="password2Errors">
+
+
+
+            </div>
+
+        </div>
+
+
+
+        <button class="btn btn-success" type="submit" class="submit-btn">Register</button>
+
+    </form>
+
+
+
+    <div class="footer-text">
+
+        Already have an account? <a href="{% url 'login-cargo' %}">Login here</a>
+
+    </div>
+
+    
+
+    <div 
+
+      data-register-target="container"
+
+      class="toast-container-custom"
+
+    >
+
+      <!-- Toasts will be inserted here -->
+
+    </div>
+
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script src="{% static 'js/register.js' %}" type="module"></script>
+
+</body>
+
+</html>

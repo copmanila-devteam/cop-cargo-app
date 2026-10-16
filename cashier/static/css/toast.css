@@ -1,0 +1,63 @@
+.toast-item {
+
+    max-width: 400px;
+
+    transform: translateX(100%);
+
+    opacity: 0;
+
+    transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+
+}
+
+
+
+.toast-item.toast-visible {
+
+transform: translateX(0);
+
+opacity: 1;
+
+}
+
+
+
+.toast-container-custom {
+
+position: fixed;
+
+top: 1.25rem;
+
+right: 1.25rem;
+
+z-index: 1090;
+
+max-width: 400px;
+
+pointer-events: none;
+
+}
+
+
+
+.toast-container-custom > div {
+
+pointer-events: auto;
+
+}
+
+
+
+@media (max-width: 576px) {
+
+.toast-container-custom {
+
+    left: 1rem;
+
+    right: 1rem;
+
+    max-width: none;
+
+}
+
+}

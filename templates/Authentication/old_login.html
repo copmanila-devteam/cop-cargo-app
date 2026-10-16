@@ -1,0 +1,182 @@
+{% load static %}
+
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>CarGo Login</title>
+
+    <link rel="stylesheet" href="{% static 'bs/css/bootstrap.min.css' %}" type="text/css">
+
+    <script src="{% static 'js/jquery.js' %}"></script>
+
+    <style>
+
+        body {
+
+            background-color: #f8f9fa;
+
+        }
+
+        .login-card {
+
+            width: 100%;
+
+            max-width: 400px;
+
+            border: none;
+
+            border-radius: 1rem;
+
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+
+        }
+
+        .logo-img {
+
+            width: 400px;
+
+            height: 130px;
+
+            object-fit: cover;
+
+            border-radius: 15px;
+
+        }
+
+        /* This ensures the red border matches the red text when there is an error */
+
+        .is-invalid {
+
+            border-color: #dc3545 !important;
+
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+
+
+    <div class="container-fluid vh-100 d-flex align-items-center justify-content-center">
+
+        <div class="card login-card bg-white p-4 p-md-5">
+
+            
+
+            <div class="text-center mb-4">
+
+                <img src="{% static 'img/cargo_logo.png'%}" style="width:70%" alt="Logo" class="logo-image">
+
+             
+
+               
+            </div>
+
+
+
+             {% if form.non_field_errors %}
+
+                <div class="alert alert-danger py-2 small border-0 mb-4" role="alert">
+
+                    {% for error in form.non_field_errors %}
+
+                        {{ error }}
+
+                    {% endfor %}
+
+                </div>
+
+            {% endif %}
+
+
+
+            <form action="#" method="POST">
+
+                {% csrf_token %}
+
+                <div class="mb-3">
+
+                    {{form.username.label}}
+
+                    {{form.username}}
+
+                    {% if form.username.errors %}
+
+                        <div class="text-danger small mt-1">
+
+                            {% for error in form.username.errors %}
+
+                                {{ error }}
+
+                            {% endfor %}
+
+                        </div>
+
+                    {% endif %}
+
+                </div>
+
+
+
+                <div class="mb-3">
+
+                    {{form.password.label}}
+
+                    {{form.password}}
+
+
+
+                    {% if form.password.errors %}
+
+                    <div class="text-danger small mt-1">
+
+                        {% for error in form.password.errors %}
+
+                            {{ error }}
+
+                        {% endfor %}
+
+                    </div>
+
+                    {% endif %}
+
+                </div>
+
+                
+
+
+
+                <button type="submit" class="btn btn-success w-100 py-2 fw-semibold">Login</button>
+
+            </form>
+
+
+
+            <div class="text-center mt-4">
+
+                <span class="text-muted small">Don't have an account?</span>
+
+                <a href="{% url 'register'%}" class="text-decoration-none small fw-bold ms-1">Create Account</a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+
+</html>

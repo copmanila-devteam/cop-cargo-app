@@ -1,0 +1,261 @@
+{% load static %}
+
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>CarGo Login</title>
+
+    <link rel="stylesheet" href="{% static 'bs/css/bootstrap.min.css' %}" type="text/css">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    
+
+    <script src="{% static 'js/jquery.js' %}"></script>
+
+    <style>
+
+        body {
+
+            background-color: #f8f9fa;
+
+        }
+
+        .login-card {
+
+            width: 100%;
+
+            max-width: 400px;
+
+            border: none;
+
+            border-radius: 1rem;
+
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+
+        }
+
+        .logo-img {
+
+            width: 400px;
+
+            height: 130px;
+
+            object-fit: cover;
+
+            border-radius: 15px;
+
+        }
+
+        /* This ensures the red border matches the red text when there is an error */
+
+        .is-invalid {
+
+            border-color: #dc3545 !important;
+
+        }
+
+        .password-wrapper {
+
+            position: relative;
+
+          
+
+            display: flex;
+
+            align-items: center;
+
+        }
+
+        .password-wrapper input {
+
+            padding-right: 45px; /* Make room for the eye icon */
+
+        }
+
+        .password-toggle {
+
+            position: absolute;
+
+            right: 15px;
+
+            cursor: pointer;
+
+            color: #666;
+
+            font-size: 18px;
+
+            user-select: none;
+
+            transition: color 0.3s ease;
+
+        }
+
+
+
+        .password-toggle:hover {
+
+            color: #4A90E2;
+
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+
+
+    <div class="container-fluid vh-100 d-flex align-items-center justify-content-center">
+
+        <div class="card login-card bg-white p-4 p-md-5">
+
+            
+
+            <div class="text-center mb-4">
+
+                <img src="{% static 'img/cargo_logo.png'%}" style="width:70%" alt="Logo" class="logo-image">
+
+            </div>
+
+
+
+             {% if form.non_field_errors %}
+
+                <div class="alert alert-danger py-2 small border-0 mb-4" role="alert">
+
+                    {% for error in form.non_field_errors %}
+
+                        {{ error }}
+
+                    {% endfor %}
+
+                </div>
+
+            {% endif %}
+
+
+
+            <form action="#" method="POST">
+
+                {% csrf_token %}
+
+                <div class="mb-3">
+
+                    {{form.username.label}}
+
+                    {{form.username}}
+
+                    {% if form.username.errors %}
+
+                        <div class="text-danger small mt-1">
+
+                            {% for error in form.username.errors %}
+
+                                {{ error }}
+
+                            {% endfor %}
+
+                        </div>
+
+                    {% endif %}
+
+                </div>
+
+
+
+                <div class="mb-3">
+
+                    {{form.password.label}}
+
+                    <div class="password-wrapper">
+
+                        {{form.password}}
+
+                        <i class="bi bi-eye-slash password-toggle" id="togglePassword"></i>
+
+                    </div>
+
+
+
+                    {% if form.password.errors %}
+
+                    <div class="text-danger small mt-1">
+
+                        {% for error in form.password.errors %}
+
+                            {{ error }}
+
+                        {% endfor %}
+
+                    </div>
+
+                    {% endif %}
+
+                </div>
+
+                
+
+
+
+                <button type="submit" class="btn btn-success w-100 py-2 fw-semibold">Login</button>
+
+            </form>
+
+
+
+            <div class="text-center mt-4">
+
+                <span class="text-muted small">Don't have an account?</span>
+
+                <a href="{% url 'register'%}" class="text-decoration-none small fw-bold ms-1">Create Account</a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+    <script>
+
+        $(document).ready(function(){
+
+            const password = $('input[name="password"]');
+
+            $("#togglePassword").on('click', function (){
+
+                const type = password.attr('type') === "password" ? 'text' : 'password';
+
+                console.log(type);
+
+                password.attr('type', type)
+
+
+
+                $(this).toggleClass('bi-eye bi-eye-slash');
+
+
+
+            });
+
+        });
+
+    </script>
+
+</body>
+
+</html>

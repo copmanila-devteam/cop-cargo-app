@@ -1,0 +1,1989 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+
+
+
+
+{% block title %}COP Cargo Web - Leader Portal{% endblock%}
+
+{% block styles %}
+
+<link rel="stylesheet" href="{% static 'css/cargo_form.css' %}">
+
+{% endblock %}
+
+
+
+{% block main %}
+
+
+
+    <div class="container mt-4">
+
+        <form method="post" enctype="multipart/form-data" data-controller="trip-form" data-action="submit->trip-form#handleSubmit" action="{% url 'cashier_entry' %}">
+
+            {% csrf_token %}
+
+            
+
+            <div class="row g-4">
+
+                <div class="col-lg-7 order-1">
+
+                    <div class="main-card">
+
+                        <div class="d-flex align-items-center gap-2 mb-4">
+
+                            <div class="section-header-icon">
+
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+
+                            </div>
+
+                            <h2 class="h5 mb-0 fw-bold">Trip Details</h2>
+
+                        </div>
+
+
+
+                        <div class="mb-4 p-3 bg-white border rounded-4 d-flex align-items-center gap-3 shadow-sm animate-slide-in">
+
+                            <div class="section-header-icon" style="background-color: #f1f5f9;">
+
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+
+                            </div>
+
+                            <div>
+
+                                <p class="text-muted small fw-bold mb-0 text-uppercase" style="font-size: 9px; letter-spacing: 0.05em;">Go Group ID: {% if request.user.go_group_id %}
+
+                                                                                                                                                            {{ request.user.go_group_id }}
+
+                                                                                                                                                    {% else %}
+
+                                                                                                                                                            N/A
+
+                                                                                                                                                   {% endif %}</p>
+
+                                <h6 class="fw-black mb-0 text-dark">Group Leader: {{ request.user.first_name }} {{ request.user.last_name }}</h6>
+
+                            </div>
+
+                        </div>
+
+
+
+                        <div class="row g-3">
+
+                            <div class="col-md-6">
+
+                                <label class="form-label">{{ form.start_location.label }}</label>
+
+                                <div data-action="change->trip-form#handleStartLocationChange">
+
+                                    {{ form.start_location }}
+
+                                </div>
+
+                            </div>
+
+                            <div class="col-md-6">
+
+                                <label class="form-label">{{ form.campus.label }}</label>
+
+                                <div data-action="change->trip-form#handleCampusChange">
+
+                                    {{ form.campus }}
+
+                                </div>
+
+                            </div>
+
+                            <div class="col-12">
+
+                                <label class="form-label">{{ form.service_schedule.label }}</label>
+
+                                {{ form.service_schedule }}
+
+                            </div>
+
+                            <div class="col-md-4">
+
+                                <label class="form-label">Subsidy Type*</label>
+
+                               {{ form.subsidy_type }}
+
+                            </div>
+
+                            <div class="col-md-4">
+
+                                <label class="form-label">Plate Number*</label>
+
+                                {{ form.plate_num }}
+
+                            </div>
+
+                            <div class="col-md-4">
+
+                                <label class="form-label">{{ form.vehicle.label }}</label>
+
+                                <div data-action="change->trip-form#handleVehicleChange">
+
+                                    {{ form.vehicle }}
+
+                                </div>
+
+                            </div>
+
+                            <div class="col-12 mt-4">
+
+                                <div class="card border-dashed p-3 bg-light bg-opacity-50">
+
+                                    <label class="form-label">{{ form.photos.label }}</label>
+
+                                    <div data-action="change->trip-form#handlePhotoPreview">{{ form.photos }}</div>
+
+                                    <div id="image-previews" class="mt-3 d-flex flex-column gap-2"></div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+
+
+                        <div class="mt-4 p-3 rounded-4 bg-light border d-flex justify-content-between align-items-center shadow-sm">
+
+                            <div class="d-flex align-items-center gap-2">
+
+                                <span class="small fw-bold text-muted text-uppercase">Rental Rate</span>
+
+                            </div>
+
+                            <span class="h3 mb-0 fw-black text-dark" id="price-display">P 0.00</span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="col-lg-5 order-2" data-controller="passengers" data-passengers-initial-value="{{ passengers_json|default:'[]' }}">
+
+                    <div class="main-card d-flex flex-column h-100">
+
+                        <div class="d-flex align-items-center justify-content-between mb-4">
+
+                            <div class="d-flex align-items-center gap-2">
+
+                                <div class="section-header-icon">
+
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+
+                                </div>
+
+                                <h2 class="h5 mb-0 fw-bold">CarGo Members</h2>
+
+                            </div>
+
+                            <button type="button" class="btn btn-emerald py-2 px-3 small d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#passengerModal">
+
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+
+                                <span class="small fw-bold">Add</span>
+
+                            </button>
+
+                        </div>
+
+
+
+                        <div class="flex-grow-1">
+
+                            <div id="manifest-list"></div>
+
+                        </div>
+
+
+
+                        <div class="pt-4 mt-4 border-top d-flex align-items-center justify-content-between">
+
+                            <span class="small text-muted fw-semibold">Members Count</span>
+
+                            <span class="badge rounded-pill px-3 py-2 fw-bold" style="background-color: var(--emerald-50); color: var(--emerald-700);" data-passengers-target="count">0 Persons</span>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="col-12 order-3">
+
+                    <input type="hidden" name="passengers_data" id="id_passengers_data" data-trip-form-target="manifestInput" value="{{ passengers_json|default:'[]' }}">
+
+                    <script id="matrix-data" type="application/json">{{ matrix_prices_json|safe }}</script>
+
+                    <script id="attendees-data" type="application/json">{{ leader_attendees_json|safe }}</script>
+
+                    
+
+                    <div class="main-card p-3">
+
+                        <button type="submit" class="btn btn-emerald btn-lg w-100 py-3" data-trip-form-target="submitBtn" disabled>
+
+                            Complete Entry
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </form>
+
+    </div>
+
+
+
+  
+
+    <div class="modal fade" id="passengerModal" tabindex="-1" data-controller="passenger-form">
+
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+
+            <div class="modal-content border-0 shadow-lg rounded-4">
+
+                <div class="modal-header border-0 px-4 pt-4 pb-0">
+
+                    <h3 class="h4 fw-black text-dark mb-1">Add Passengers</h3>
+
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+
+                </div>
+
+                <div class="modal-body p-4" style="display: flex; flex-direction: column;">
+
+                    <!-- Tab Pills -->
+
+                    <div class="tab-pills">
+
+                        <button type="button" class="tab-pill active" data-action="click->passenger-form#showTab" data-tab="select">
+
+                            Select Existing
+
+                        </button>
+
+                        <!-- <button type="button" class="tab-pill" data-action="click->passenger-form#showTab" data-tab="manual">
+
+                            Add New
+
+                        </button> -->
+
+                    </div>
+
+
+
+                    <!-- Tab: Select from List -->
+
+                    <div data-passenger-form-target="selectTab">
+
+                        <div class="search-box">
+
+                            <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+
+                            <input type="text" class="form-control" placeholder="Search by name..." data-action="input->passenger-form#filterAttendees" data-passenger-form-target="searchInput">
+
+                        </div>
+
+
+
+                        <div class="attendee-list-container" data-passenger-form-target="attendeeList" style="flex-grow: 1; overflow-y: auto; max-height: 800px;">
+
+                            <!-- Dynamically populated -->
+
+                        </div>
+
+
+
+                        <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
+
+                            <span class="small text-muted fw-semibold">
+
+                                <span data-passenger-form-target="selectedCount">0</span> selected
+
+                            </span>
+
+                            <button type="button" class="btn btn-emerald" data-action="click->passenger-form#addSelectedAttendees">
+
+                                Add Selected
+
+                            </button>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- Tab: Manual Entry -->
+
+                    <div data-passenger-form-target="manualTab" style="display: none;">
+
+                        <form data-passenger-form-target="form">
+
+
+
+                            <div class="mb-3">
+
+                                <label class="form-label" for="id_cop_id">Authorized ID (COP ID)</label>
+
+                                <input type="number" 
+
+                                    class="form-control" 
+
+                                    name="cop_id" 
+
+                                    id="id_cop_id" 
+
+                                    min="100000"
+
+                                    max="999999"
+
+                                    placeholder="COP ID (6-digit)"
+
+                                    oninput="if (this.value.length > 6) this.value = this.value.slice(0, 6);">
+
+                                <div class="form-text" style="font-size: 11px;">Must be exactly 6 digits.</div>
+
+                            </div>
+
+
+
+                            <div class="mb-3">
+
+                                <label for="{{ passenger_form.first_name.id_for_label }}" class="form-label">
+
+                                    {{ passenger_form.first_name.label }}
+
+                                </label>
+
+                                {{ passenger_form.first_name }}
+
+                            </div>
+
+
+
+                            <div class="mb-3">
+
+                                <label for="{{ passenger_form.middle_name.id_for_label }}" class="form-label">
+
+                                    {{ passenger_form.middle_name.label }}
+
+                                </label>
+
+                                {{ passenger_form.middle_name }}
+
+                            </div>
+
+
+
+                            <div class="mb-3">
+
+                                <label for="{{ passenger_form.last_name.id_for_label }}" class="form-label">
+
+                                    {{ passenger_form.last_name.label }}
+
+                                </label>
+
+                                {{ passenger_form.last_name }}
+
+                            </div>
+
+
+
+                            <div class="d-flex gap-2 justify-content-end mt-4">
+
+                                <button type="button" class="btn btn-link text-muted text-decoration-none" data-bs-dismiss="modal">Cancel</button>
+
+                                <button type="button" class="btn btn-emerald" data-action="click->passenger-form#submitManual">Add to List</button>
+
+                            </div>
+
+                        </form>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script type="module">
+
+        import { Application, Controller } from "https://cdn.jsdelivr.net/npm/@hotwired/stimulus@3.2.2/dist/stimulus.min.js";
+
+        window.Stimulus = Application.start();
+
+
+
+        // --- Notification Controller ---
+
+        Stimulus.register("notification", class extends Controller {
+
+            show(message, type = "success") {
+
+                const alert = document.createElement('div');
+
+                const typeClass = type === 'error' || type === 'danger' ? 'danger' : 'emerald';
+
+                
+
+                let icon = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" class="me-2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>`;
+
+                if (typeClass === 'danger') {
+
+                    icon = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" class="me-2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`;
+
+                }
+
+
+
+                alert.className = `alert-custom alert-${typeClass} animate-slide-in d-flex align-items-center justify-content-between p-3 mb-2 shadow-sm rounded-3`;
+
+                alert.style.backgroundColor = typeClass === 'emerald' ? '#ecfdf5' : '#fef2f2';
+
+                alert.style.borderLeft = `4px solid ${typeClass === 'emerald' ? '#059669' : '#dc2626'}`;
+
+                
+
+                alert.innerHTML = `
+
+                    <div class="d-flex align-items-center">
+
+                        ${icon}
+
+                        <span class="fw-bold" style="font-size: 14px; color: #1e293b">${message}</span>
+
+                    </div>
+
+                    <button type="button" class="btn-close" style="font-size: 0.6rem" data-action="click->notification#close"></button>
+
+                `;
+
+                
+
+                this.element.appendChild(alert);
+
+                setTimeout(() => this.removeAlert(alert), 5000);
+
+            }
+
+
+
+            close(event) {
+
+                this.removeAlert(event.target.closest('.alert-custom'));
+
+            }
+
+
+
+            removeAlert(alert) {
+
+                if (!alert) return;
+
+                alert.style.opacity = '0';
+
+                alert.style.transform = 'translateX(20px)';
+
+                alert.style.transition = 'all 0.5s ease';
+
+                setTimeout(() => alert.remove(), 500);
+
+            }
+
+        });
+
+
+
+      
+
+        Stimulus.register("trip-form", class extends Controller {
+
+            static targets = ["submitBtn", "manifestInput"];
+
+
+
+            connect() {
+
+                const matrixDataElem = document.getElementById('matrix-data');
+
+                this.matrixPrices = matrixDataElem ? JSON.parse(matrixDataElem.textContent) : [];
+
+                this.selectedFiles = [];
+
+                this.element.addEventListener('input', () => this.updateSubmitButton());
+
+                
+
+                this.toggleScheduleField();
+
+                this.updateSubmitButton();
+
+            }
+
+
+
+        
+
+
+
+            async handleCampusChange(event) {
+
+                const campusId = event.target.value;
+
+                const scheduleSelect = this.element.querySelector('[name="service_schedule"]');
+
+                const loadingIndicator = document.getElementById('schedule-loading');
+
+
+
+                if (!campusId) {
+
+                    this.toggleScheduleField();
+
+                    this.updatePriceDisplay();
+
+                    this.updateSubmitButton();
+
+                    return;
+
+                }
+
+
+
+                loadingIndicator?.classList.remove('d-none');
+
+                scheduleSelect.disabled = true;
+
+
+
+                try {
+
+                    const response = await fetch(`/api/get-schedules/?campus_id=${campusId}`);
+
+                    const data = await response.json();
+
+
+
+                    scheduleSelect.innerHTML = '<option value="">---------</option>';
+
+                    data.forEach(item => {
+
+                        const option = document.createElement('option');
+
+                        option.value = item.id;
+
+                        option.textContent = item.name;
+
+                        scheduleSelect.appendChild(option);
+
+                    });
+
+
+
+                    scheduleSelect.disabled = false;
+
+                } catch (error) {
+
+                    console.error("Schedule fetch failed:", error);
+
+                } finally {
+
+                    loadingIndicator?.classList.add('d-none');
+
+                    this.updatePriceDisplay();
+
+                    this.updateSubmitButton();
+
+                }
+
+            }
+
+
+
+            async handleSubmit(event) {
+
+    event.preventDefault();
+
+    
+
+    const form = event.target;
+
+    const formData = new FormData(form);
+
+    
+
+    // Remove the original photos field
+
+    formData.delete('photos');
+
+    
+
+    // Add only the selected files that haven't been deleted
+
+    this.selectedFiles.forEach((file, index) => {
+
+        formData.append('photos', file);
+
+    });
+
+    
+
+    const notify = this.application.getControllerForElementAndIdentifier(
+
+        document.getElementById('notification-container'), "notification"
+
+    );
+
+
+
+    this.submitBtnTarget.disabled = true;
+
+    const originalText = this.submitBtnTarget.innerHTML;
+
+    this.submitBtnTarget.innerHTML = `<span class="spinner-border spinner-border-sm"></span> Storing...`;
+
+
+
+    try {
+
+        const response = await fetch(form.action, {
+
+            method: 'POST',
+
+            body: formData,
+
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+
+        });
+
+
+
+        const data = await response.json();
+
+
+
+        if (response.ok) {
+
+            notify?.show(data.message, "success");
+
+            
+
+            setTimeout(() => {
+
+                window.location.href = "{% url 'cashier_entry' %}";
+
+            }, 2000);
+
+            
+
+        } else {
+
+            notify?.show(data.message || "Error saving entry", "danger");
+
+            this.submitBtnTarget.disabled = false;
+
+            this.submitBtnTarget.innerHTML = originalText;
+
+        }
+
+    } catch (error) {
+
+        notify?.show("Connection error. Try again.", "danger");
+
+        this.submitBtnTarget.disabled = false;
+
+        this.submitBtnTarget.innerHTML = originalText;
+
+    }
+
+}
+
+
+
+            handleStartLocationChange(event) {
+
+                this.updatePriceDisplay();
+
+                this.updateSubmitButton();
+
+            }
+
+
+
+            handleVehicleChange(event) {
+
+                this.updatePriceDisplay();
+
+                this.updateSubmitButton();
+
+            }
+
+
+
+            toggleScheduleField() {
+
+                const campus = this.element.querySelector('[name="campus"]')?.value;
+
+                const schedule = this.element.querySelector('[name="service_schedule"]');
+
+                if (schedule) schedule.disabled = !campus;
+
+            }
+
+
+
+          
+
+
+
+            handlePhotoPreview(event) {
+
+                const files = Array.from(event.target.files);
+
+
+
+                if (files.length === 0) return;
+
+
+
+                // Add new files to selectedFiles array
+
+                files.forEach(file => {
+
+                    this.selectedFiles.push(file);
+
+                });
+
+
+
+                // Re-render all previews
+
+                this.renderPhotoPreviews();
+
+
+
+                const notify = this.application.getControllerForElementAndIdentifier(document.getElementById('notification-container'), "notification");
+
+                notify?.show(`${files.length} photo(s) selected`, "success");
+
+            }
+
+
+
+            renderPhotoPreviews() {
+
+                const previewContainer = document.getElementById('image-previews');
+
+                previewContainer.innerHTML = '';
+
+
+
+                this.selectedFiles.forEach((file, index) => {
+
+                    const reader = new FileReader();
+
+                    
+
+                    reader.onload = (e) => {
+
+                        const listItem = document.createElement('div');
+
+                        listItem.className = 'photo-list-item';
+
+                        listItem.dataset.fileIndex = index;
+
+                        
+
+                        listItem.innerHTML = `
+
+                            <div class="d-flex align-items-center gap-3">
+
+                                <img src="${e.target.result}" class="photo-preview-sm shadow-sm">
+
+                                <div>
+
+                                    <div class="file-name">${file.name}</div>
+
+                                    <div class="text-muted" style="font-size: 10px; font-weight: 700;">
+
+                                        ${(file.size / 1024).toFixed(1)} KB
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                            <button type="button" class="btn btn-link text-danger p-0" data-action="click->trip-form#deletePhoto" data-index="${index}">
+
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+
+                                    <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/>
+
+                                </svg>
+
+                            </button>
+
+                        `;
+
+                        
+
+                        previewContainer.appendChild(listItem);
+
+                    };
+
+                    
+
+                    reader.readAsDataURL(file);
+
+                });
+
+
+
+                this.updateSubmitButton();
+
+            }
+
+
+
+            deletePhoto(event) {
+
+                const index = parseInt(event.currentTarget.dataset.index);
+
+                
+
+                // Remove file from selectedFiles array
+
+                this.selectedFiles.splice(index, 1);
+
+                
+
+                // Re-render previews
+
+                this.renderPhotoPreviews();
+
+                
+
+                const notify = this.application.getControllerForElementAndIdentifier(document.getElementById('notification-container'), "notification");
+
+                notify?.show("Photo removed", "danger");
+
+            }
+
+
+
+            updatePriceDisplay() {
+
+                const cityId = this.element.querySelector('[name="start_location"]')?.value;
+
+                const campusId = this.element.querySelector('[name="campus"]')?.value;
+
+                const vehicleId = this.element.querySelector('[name="vehicle"]')?.value;
+
+                const priceDisplay = document.getElementById('price-display');
+
+
+
+                let price = 0;
+
+
+
+                if (cityId && campusId && vehicleId) {
+
+                    const matrixEntry = this.matrixPrices.find(
+
+                        m => m.city_id == cityId && m.campus_id == campusId && m.vehicle_id == vehicleId
+
+                    );
+
+                    price = matrixEntry ? matrixEntry.peso_price : 0;
+
+                }
+
+
+
+                if (priceDisplay) {
+
+                    priceDisplay.textContent = `P ${parseFloat(price).toLocaleString(undefined, {minimumFractionDigits: 2})}`;
+
+                }
+
+            }
+
+
+
+            updateSubmitButton() {
+
+                const passengerCount = document.querySelectorAll('.passenger-card').length;
+
+                const plateNum = this.element.querySelector('[name="plate_num"]')?.value.trim();
+
+                const startLocation = this.element.querySelector('[name="start_location"]')?.value;
+
+                const campus = this.element.querySelector('[name="campus"]')?.value;
+
+                const schedule = this.element.querySelector('[name="service_schedule"]')?.value;
+
+                const vehicleId = this.element.querySelector('[name="vehicle"]')?.value;
+
+                const subsidyType = this.element.querySelector('[name="subsidy_type"]')?.value;
+
+                const photoInput = this.element.querySelector('[name="photos"]');
+
+                // const hasPhotos = photoInput && photoInput.files.length > 0;
+
+                const hasPhotos = this.selectedFiles.length > 0;
+
+
+
+                this.updatePriceDisplay();
+
+
+
+                const isValid = 
+
+                    passengerCount > 0 && 
+
+                    startLocation !== "" && 
+
+                    campus !== "" && 
+
+                    schedule !== "" && 
+
+                    plateNum !== "" && 
+
+                    subsidyType !== "" &&
+
+                    vehicleId !== "" &&
+
+                    hasPhotos;
+
+
+
+                this.submitBtnTarget.disabled = !isValid;
+
+                this.syncManifestData();
+
+            }
+
+
+
+           
+
+            syncManifestData() {
+
+                const passengers = [];
+
+                document.querySelectorAll('.passenger-card').forEach(card => {
+
+                    passengers.push({
+
+                        first_name: card.dataset.firstName,
+
+                        middle_name: card.dataset.middleName,
+
+                        last_name: card.dataset.lastName,
+
+                        cop_id: card.dataset.copId // Include the ID in the JSON
+
+                    });
+
+                });
+
+                if (this.hasManifestInputTarget) {
+
+                    this.manifestInputTarget.value = JSON.stringify(passengers);
+
+                }
+
+            }
+
+        });
+
+
+
+        // --- Passenger List Controller (UPDATED) ---
+
+Stimulus.register("passengers", class extends Controller {
+
+    static targets = ["count"];
+
+    static values = { initial: String };
+
+
+
+    connect() {
+
+        if (this.hasInitialValue && this.initialValue !== '[]') {
+
+            try {
+
+                const data = JSON.parse(this.initialValue);
+
+                data.forEach(p => this.renderPassengerCard(p.first_name, p.middle_name, p.last_name, p.cop_id));
+
+            } catch (e) { console.error("Initial error:", e); }
+
+        }
+
+    }
+
+
+
+    // Check if passenger already exists
+
+    passengerExists(copId, firstName, lastName) {
+
+        const existingCards = document.querySelectorAll('.passenger-card');
+
+        
+
+        for (const card of existingCards) {
+
+            const existingCopId = card.dataset.copId;
+
+            const existingFirstName = card.dataset.firstName;
+
+            const existingLastName = card.dataset.lastName;
+
+            
+
+            // Check by COP ID if both have it
+
+            if (copId && existingCopId && copId === existingCopId) {
+
+                return true;
+
+            }
+
+            
+
+            // Check by name match (case-insensitive)
+
+            if (firstName.toLowerCase() === existingFirstName.toLowerCase() && 
+
+                lastName.toLowerCase() === existingLastName.toLowerCase()) {
+
+                return true;
+
+            }
+
+        }
+
+        
+
+        return false;
+
+    }
+
+
+
+    renderPassengerCard(first, middle, last, copId = "") {
+
+        // Check for duplicates before adding
+
+        if (this.passengerExists(copId, first, last)) {
+
+            const notify = this.application.getControllerForElementAndIdentifier(
+
+                document.getElementById('notification-container'), "notification"
+
+            );
+
+            notify?.show(`${first} ${last} is already in the list`, "danger");
+
+            return false; // Return false to indicate failure
+
+        }
+
+
+
+        const list = document.getElementById('manifest-list');
+
+        const empty = list.querySelector('.border-dashed');
+
+        if (empty) empty.remove();
+
+
+
+        const count = document.querySelectorAll('.passenger-card').length + 1;
+
+        const card = document.createElement('div');
+
+        card.className = 'passenger-card d-flex align-items-center justify-content-between p-3 mb-2 animate-slide-in';
+
+        
+
+        card.dataset.firstName = first;
+
+        card.dataset.middleName = middle;
+
+        card.dataset.lastName = last;
+
+        card.dataset.copId = copId;
+
+
+
+        card.innerHTML = `
+
+            <div class="d-flex align-items-center gap-3">
+
+                <div class="index-badge">${String(count).padStart(2, '0')}</div>
+
+                <div>
+
+                    <div class="fw-bold text-dark passenger-name">${first} ${middle} ${last}</div>
+
+                    <div class="small-tag text-muted" style="font-size: 9px; font-weight: 800;">ID: ${copId}</div>
+
+                </div>
+
+            </div>
+
+            <button type="button" class="btn btn-link text-danger p-0" data-action="click->passengers#remove">
+
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>
+
+            </button>`;
+
+        
+
+        list.appendChild(card);
+
+        this.updateUI();
+
+        return true; // Return true to indicate success
+
+    }
+
+
+
+    remove(event) {
+
+        event.currentTarget.closest('.passenger-card').remove();
+
+        this.updateUI();
+
+        
+
+        const notify = this.application.getControllerForElementAndIdentifier(document.getElementById('notification-container'), "notification");
+
+        notify?.show("Passenger removed", "danger");
+
+    }
+
+
+
+    updateUI() {
+
+        const count = document.querySelectorAll('.passenger-card').length;
+
+        if (this.hasCountTarget) {
+
+            this.countTarget.textContent = `${count} Person${count !== 1 ? 's' : ''}`;
+
+        }
+
+        
+
+        const tripCtrl = this.application.getControllerForElementAndIdentifier(document.querySelector('[data-controller="trip-form"]'), "trip-form");
+
+        tripCtrl?.updateSubmitButton();
+
+    }
+
+});
+
+
+
+
+
+
+
+// --- Passenger Modal Form Controller (UPDATED) ---
+
+Stimulus.register("passenger-form", class extends Controller {
+
+    static targets = ["form", "selectTab", "manualTab", "attendeeList", "searchInput", "selectedCount"];
+
+
+
+    connect() {
+
+        this.attendeesData = [];
+
+        this.selectedAttendees = new Set();
+
+        this.loadAttendees();
+
+    }
+
+
+
+    loadAttendees() {
+
+        const attendeesDataElem = document.getElementById('attendees-data');
+
+        if (attendeesDataElem) {
+
+            this.attendeesData = JSON.parse(attendeesDataElem.textContent);
+
+            this.renderAttendeeList(this.attendeesData);
+
+        }
+
+    }
+
+
+
+    renderAttendeeList(attendees) {
+
+        if (!this.hasAttendeeListTarget) return;
+
+
+
+        if (attendees.length === 0) {
+
+            this.attendeeListTarget.innerHTML = `
+
+                <div class="text-center py-5 text-muted">
+
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" class="mb-3 mx-auto" style="opacity: 0.3;">
+
+                        <path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+
+                    </svg>
+
+                    <p class="fw-bold">No previous passengers found</p>
+
+                    <p class="small">Add new passengers manually</p>
+
+                </div>
+
+            `;
+
+            return;
+
+        }
+
+
+
+        this.attendeeListTarget.innerHTML = attendees.map(attendee => `
+
+            <div class="attendee-item mb-2" data-attendee-id="${attendee.id}" data-action="click->passenger-form#toggleAttendee">
+
+                <div class="attendee-checkbox">
+
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+
+                        <path d="M20 6L9 17l-5-5"/>
+
+                    </svg>
+
+                </div>
+
+                <div class="flex-grow-1">
+
+                    <div class="fw-bold text-dark" style="font-size: 14px;">
+
+                        ${attendee.first_name} ${attendee.middle_name} ${attendee.last_name}
+
+                    </div>
+
+                    <div class="text-muted" style="font-size: 11px; font-weight: 600;">
+
+                        Previous Passenger
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        `).join('');
+
+    }
+
+
+
+    toggleAttendee(event) {
+
+        const item = event.currentTarget;
+
+        const attendeeId = item.dataset.attendeeId;
+
+        const checkbox = item.querySelector('.attendee-checkbox svg');
+
+
+
+        if (this.selectedAttendees.has(attendeeId)) {
+
+            this.selectedAttendees.delete(attendeeId);
+
+            item.classList.remove('selected');
+
+            checkbox.style.display = 'none';
+
+        } else {
+
+            this.selectedAttendees.add(attendeeId);
+
+            item.classList.add('selected');
+
+            checkbox.style.display = 'block';
+
+        }
+
+
+
+        this.updateSelectedCount();
+
+    }
+
+
+
+    updateSelectedCount() {
+
+        if (this.hasSelectedCountTarget) {
+
+            this.selectedCountTarget.textContent = this.selectedAttendees.size;
+
+        }
+
+    }
+
+
+
+    filterAttendees(event) {
+
+        const searchTerm = event.target.value.toLowerCase();
+
+        const filtered = this.attendeesData.filter(attendee => {
+
+            const fullName = `${attendee.first_name} ${attendee.middle_name} ${attendee.last_name}`.toLowerCase();
+
+            return fullName.includes(searchTerm);
+
+        });
+
+        this.renderAttendeeList(filtered);
+
+    }
+
+
+
+    addSelectedAttendees() {
+
+        const notify = this.application.getControllerForElementAndIdentifier(
+
+            document.getElementById('notification-container'), "notification"
+
+        );
+
+
+
+        if (this.selectedAttendees.size === 0) {
+
+            return notify?.show("Please select at least one passenger", "danger");
+
+        }
+
+
+
+        const passengersCtrl = this.application.getControllerForElementAndIdentifier(
+
+            document.querySelector('[data-controller="passengers"]'), "passengers"
+
+        );
+
+
+
+        let addedCount = 0;
+
+        let skippedCount = 0;
+
+
+
+        this.selectedAttendees.forEach(attendeeId => {
+
+            const attendee = this.attendeesData.find(a => a.id == attendeeId);
+
+            if (attendee) {
+
+                const success = passengersCtrl.renderPassengerCard(
+
+                    attendee.first_name,
+
+                    attendee.middle_name,
+
+                    attendee.last_name,
+
+                    attendee.cop_id ? attendee.cop_id.toString() : ""
+
+                );
+
+                
+
+                if (success) {
+
+                    addedCount++;
+
+                } else {
+
+                    skippedCount++;
+
+                }
+
+            }
+
+        });
+
+
+
+        const modalInstance = bootstrap.Modal.getInstance(document.getElementById('passengerModal'));
+
+        modalInstance.hide();
+
+
+
+        this.selectedAttendees.clear();
+
+        this.updateSelectedCount();
+
+        document.querySelectorAll('.attendee-item').forEach(item => {
+
+            item.classList.remove('selected');
+
+            item.querySelector('.attendee-checkbox svg').style.display = 'none';
+
+        });
+
+
+
+        if (addedCount > 0) {
+
+            notify?.show(`${addedCount} passenger${addedCount !== 1 ? 's' : ''} added${skippedCount > 0 ? `, ${skippedCount} skipped (duplicates)` : ''}`, "success");
+
+        }
+
+    }
+
+    
+
+
+
+    submitManual() {
+
+        const firstInput = this.element.querySelector('[name*="first_name"]');
+
+        const middleInput = this.element.querySelector('[name*="middle_name"]');
+
+        const lastInput = this.element.querySelector('[name*="last_name"]');
+
+        const copIdInput = this.element.querySelector('#id_cop_id'); 
+
+
+
+        const first = firstInput?.value.trim();
+
+        const middle = middleInput?.value.trim();
+
+        const last = lastInput?.value.trim();
+
+        const copId = copIdInput?.value ? copIdInput.value.toString().trim() : "";
+
+
+
+        const notify = this.application.getControllerForElementAndIdentifier(
+
+            document.getElementById('notification-container'), "notification"
+
+        );
+
+
+
+        if (!first || !last) {
+
+            return notify?.show("Please enter both first and last names", "danger");
+
+        }
+
+
+
+        if (copId !== "" && copId.length !== 6) {
+
+            return notify?.show("COP ID must be exactly 6 digits", "danger");
+
+        }
+
+
+
+        const displayCopId = copId || "";
+
+
+
+        const passengersCtrl = this.application.getControllerForElementAndIdentifier(
+
+            document.querySelector('[data-controller="passengers"]'), "passengers"
+
+        );
+
+        
+
+        const success = passengersCtrl.renderPassengerCard(first, middle, last, displayCopId);
+
+        
+
+        if (success) {
+
+            const modalInstance = bootstrap.Modal.getInstance(document.getElementById('passengerModal'));
+
+            if (modalInstance) modalInstance.hide();
+
+            
+
+            [firstInput, middleInput, lastInput, copIdInput].forEach(input => {
+
+                if (input) input.value = '';
+
+            });
+
+
+
+            notify?.show(`Passenger added`, "success");
+
+        }
+
+        // If not successful, the duplicate message is already shown by renderPassengerCard
+
+    }
+
+
+
+    showTab(event) {
+
+        const targetTab = event.currentTarget.dataset.tab;
+
+        
+
+        document.querySelectorAll('.tab-pill').forEach(pill => pill.classList.remove('active'));
+
+        event.currentTarget.classList.add('active');
+
+
+
+        if (targetTab === 'select') {
+
+            this.selectTabTarget.style.display = 'block';
+
+            this.manualTabTarget.style.display = 'none';
+
+        } else {
+
+            this.selectTabTarget.style.display = 'none';
+
+            this.manualTabTarget.style.display = 'block';
+
+        }
+
+    }
+
+});
+
+
+
+        // --- Passenger Modal Form Controller (UPDATED) ---
+
+        Stimulus.register("passenger-form", class extends Controller {
+
+            static targets = ["form", "selectTab", "manualTab", "attendeeList", "searchInput", "selectedCount"];
+
+
+
+            connect() {
+
+                this.attendeesData = [];
+
+                this.selectedAttendees = new Set();
+
+                this.loadAttendees();
+
+            }
+
+
+
+            loadAttendees() {
+
+                const attendeesDataElem = document.getElementById('attendees-data');
+
+                if (attendeesDataElem) {
+
+                    this.attendeesData = JSON.parse(attendeesDataElem.textContent);
+
+                    this.renderAttendeeList(this.attendeesData);
+
+                }
+
+            }
+
+
+
+            renderAttendeeList(attendees) {
+
+                if (!this.hasAttendeeListTarget) return;
+
+
+
+                if (attendees.length === 0) {
+
+                    this.attendeeListTarget.innerHTML = `
+
+                        <div class="text-center py-5 text-muted">
+
+                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" class="mb-3 mx-auto" style="opacity: 0.3;">
+
+                                <path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+
+                            </svg>
+
+                            <p class="fw-bold">No previous passengers found</p>
+
+                            <p class="small">Add new passengers manually</p>
+
+                        </div>
+
+                    `;
+
+                    return;
+
+                }
+
+
+
+                this.attendeeListTarget.innerHTML = attendees.map(attendee => `
+
+                    <div class="attendee-item mb-2" data-attendee-id="${attendee.id}" data-action="click->passenger-form#toggleAttendee">
+
+                        <div class="attendee-checkbox">
+
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+
+                                <path d="M20 6L9 17l-5-5"/>
+
+                            </svg>
+
+                        </div>
+
+                        <div class="flex-grow-1">
+
+                            <div class="fw-bold text-dark" style="font-size: 14px;">
+
+                                ${attendee.first_name} ${attendee.middle_name} ${attendee.last_name}
+
+                            </div>
+
+                            <div class="text-muted" style="font-size: 11px; font-weight: 600;">
+
+                                Previous Passenger
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                `).join('');
+
+            }
+
+
+
+            toggleAttendee(event) {
+
+                const item = event.currentTarget;
+
+                const attendeeId = item.dataset.attendeeId;
+
+                const checkbox = item.querySelector('.attendee-checkbox svg');
+
+
+
+                if (this.selectedAttendees.has(attendeeId)) {
+
+                    this.selectedAttendees.delete(attendeeId);
+
+                    item.classList.remove('selected');
+
+                    checkbox.style.display = 'none';
+
+                } else {
+
+                    this.selectedAttendees.add(attendeeId);
+
+                    item.classList.add('selected');
+
+                    checkbox.style.display = 'block';
+
+                }
+
+
+
+                this.updateSelectedCount();
+
+            }
+
+
+
+            updateSelectedCount() {
+
+                if (this.hasSelectedCountTarget) {
+
+                    this.selectedCountTarget.textContent = this.selectedAttendees.size;
+
+                }
+
+            }
+
+
+
+            filterAttendees(event) {
+
+                const searchTerm = event.target.value.toLowerCase();
+
+                const filtered = this.attendeesData.filter(attendee => {
+
+                    const fullName = `${attendee.first_name} ${attendee.middle_name} ${attendee.last_name}`.toLowerCase();
+
+                    return fullName.includes(searchTerm);
+
+                });
+
+                this.renderAttendeeList(filtered);
+
+            }
+
+
+
+            addSelectedAttendees() {
+
+                const notify = this.application.getControllerForElementAndIdentifier(
+
+                    document.getElementById('notification-container'), "notification"
+
+                );
+
+
+
+                if (this.selectedAttendees.size === 0) {
+
+                    return notify?.show("Please select at least one passenger", "danger");
+
+                }
+
+
+
+                const passengersCtrl = this.application.getControllerForElementAndIdentifier(
+
+                    document.querySelector('[data-controller="passengers"]'), "passengers"
+
+                );
+
+
+
+          
+
+                this.selectedAttendees.forEach(attendeeId => {
+
+                    const attendee = this.attendeesData.find(a => a.id == attendeeId);
+
+                    if (attendee) {
+
+                        passengersCtrl.renderPassengerCard(
+
+                            attendee.first_name,
+
+                            attendee.middle_name,
+
+                            attendee.last_name,
+
+                             attendee.cop_id ? attendee.cop_id.toString() : ""
+
+                        );
+
+                    }
+
+                });
+
+
+
+                const modalInstance = bootstrap.Modal.getInstance(document.getElementById('passengerModal'));
+
+                modalInstance.hide();
+
+
+
+                this.selectedAttendees.clear();
+
+                this.updateSelectedCount();
+
+                document.querySelectorAll('.attendee-item').forEach(item => {
+
+                    item.classList.remove('selected');
+
+                    item.querySelector('.attendee-checkbox svg').style.display = 'none';
+
+                });
+
+
+
+                notify?.show(`${this.selectedAttendees.size || 'Passengers'} added`, "success");
+
+            }
+
+
+
+            submitManual() {
+
+                const firstInput = this.element.querySelector('[name*="first_name"]');
+
+                const middleInput = this.element.querySelector('[name*="middle_name"]');
+
+                const lastInput = this.element.querySelector('[name*="last_name"]');
+
+                const copIdInput = this.element.querySelector('#id_cop_id'); 
+
+
+
+                const first = firstInput?.value.trim();
+
+                const middle = middleInput?.value.trim();
+
+                const last = lastInput?.value.trim();
+
+                const copId = copIdInput?.value ? copIdInput.value.toString().trim() : "";
+
+
+
+                const notify = this.application.getControllerForElementAndIdentifier(
+
+                    document.getElementById('notification-container'), "notification"
+
+                );
+
+
+
+                if (!first || !last) {
+
+                    return notify?.show("Please enter both first and last names", "danger");
+
+                }
+
+
+
+                if (copId !== "" && copId.length !== 6) {
+
+                    return notify?.show("COP ID must be exactly 6 digits", "danger");
+
+                }
+
+
+
+                // 4. Set display fallback for the UI card
+
+                const displayCopId = copId || "";
+
+
+
+                const passengersCtrl = this.application.getControllerForElementAndIdentifier(
+
+                    document.querySelector('[data-controller="passengers"]'), "passengers"
+
+                );
+
+                passengersCtrl.renderPassengerCard(first, middle, last, displayCopId);
+
+                
+
+                const modalInstance = bootstrap.Modal.getInstance(document.getElementById('passengerModal'));
+
+                if (modalInstance) modalInstance.hide();
+
+                
+
+                [firstInput, middleInput, lastInput, copIdInput].forEach(input => {
+
+                    if (input) input.value = '';
+
+                });
+
+
+
+                notify?.show(`Passenger added`, "success");
+
+            }
+
+
+
+            showTab(event) {
+
+                const targetTab = event.currentTarget.dataset.tab;
+
+                
+
+                document.querySelectorAll('.tab-pill').forEach(pill => pill.classList.remove('active'));
+
+                event.currentTarget.classList.add('active');
+
+
+
+                if (targetTab === 'select') {
+
+                    this.selectTabTarget.style.display = 'block';
+
+                    this.manualTabTarget.style.display = 'none';
+
+                } else {
+
+                    this.selectTabTarget.style.display = 'none';
+
+                    this.manualTabTarget.style.display = 'block';
+
+                }
+
+            }
+
+        });
+
+    </script>
+
+{% endblock %}

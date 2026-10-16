@@ -1,0 +1,193 @@
+{% load static %}
+
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>{% block title%}{%endblock%}</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+
+    
+
+    {% block styles %} {% endblock %}
+
+</head>
+
+<body>
+
+
+
+    <div class="alert-container" id="notification-container" data-controller="notification"></div>
+
+
+
+    <nav class="navbar navbar-expand-lg navbar-light sticky-top">
+
+        <div class="container">
+
+            <a class="navbar-brand d-flex align-items-center gap-2" href="#">
+
+                <div>
+
+                    <h1 class="h6 mb-0 fw-black text-dark">COP Cargo</h1>
+
+                    <span style="font-size: 9px;" class="text-muted fw-bold text-uppercase">Leaders Portal</span>
+
+                </div>
+
+            </a>
+
+
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+
+                <span class="navbar-toggler-icon"></span>
+
+            </button>
+
+
+
+            <div class="collapse navbar-collapse" id="navbarNav">
+
+                <ul class="navbar-nav ms-auto me-3 align-items-center gap-2">
+
+                    <li class="nav-item">
+
+                        <a class="nav-link fw-bold px-3 py-2" href="{% url 'cashier_entry' %}" style="border-radius: 10px; transition: all 0.2s;">
+
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-1" style="vertical-align: -2px;">
+
+                                <path d="M5 17H4a2 2 0 0 1-2-2V5c0-1.1.9-2 2-2h1M23 15v5a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-1h-8v1a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-5"/>
+
+                                <path d="M7 15h10v-5H7z"/>
+
+                                <circle cx="9.5" cy="17.5" r="1.5"/>
+
+                                <circle cx="14.5" cy="17.5" r="1.5"/>
+
+                                <path d="M7 10V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v5"/>
+
+                                <circle cx="10" cy="7" r="1"/>
+
+                                <circle cx="14" cy="7" r="1"/>
+
+                            </svg>
+
+                            Trip
+
+                        </a>
+
+                    </li>
+
+                    <li class="nav-item">
+
+                        <a class="nav-link fw-bold px-3 py-2" href="{% url 'manage-attendees' %}" style="border-radius: 10px; transition: all 0.2s;">
+
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-1" style="vertical-align: -2px;">
+
+                                <path d="M12 5v14M5 12h14"/>
+
+                            </svg>
+
+                            Manage Members
+
+                        </a>
+
+                    </li>
+
+                    <li class="nav-item">
+
+                        <a class="nav-link fw-bold px-3 py-2" href="{% url 'vouchers-list' %}" style="border-radius: 10px; transition: all 0.2s;">
+
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-1" style="vertical-align: -2px;">
+
+                                <path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/>
+
+                                <path d="M7 7h.01"/>
+
+                            </svg>
+
+                            Vouchers
+
+                        </a>
+
+                    </li>
+
+                    <li class="nav-item">
+
+                        <a class="nav-link fw-bold px-3 py-2" href="{% url 'booking-history' %}" style="border-radius: 10px; transition: all 0.2s;">
+
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="me-1" style="vertical-align: -2px;">
+
+                                <path d="M5 17H4a2 2 0 0 1-2-2V5c0-1.1.9-2 2-2h1M23 15v5a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-1h-8v1a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-5"/>
+
+                                <path d="M7 15h10v-5H7z"/>
+
+                                <circle cx="9.5" cy="17.5" r="1.5"/>
+
+                                <circle cx="14.5" cy="17.5" r="1.5"/>
+
+                                <path d="M7 10V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v5"/>
+
+                                <circle cx="10" cy="7" r="1"/>
+
+                                <circle cx="14" cy="7" r="1"/>
+
+                            </svg>
+
+                            Trip History
+
+                        </a>
+
+                    </li>
+
+                </ul>
+
+
+
+                <div style="max-width: 120px;">
+
+                    <form action="{% url 'logout-cargo' %}" method="post" class="m-0">
+
+                        {% csrf_token %}
+
+                        <button class="btn btn-outline-danger btn-sm w-100 fw-bold" type="submit" style="border-radius: 10px;">
+
+                            Logout
+
+                        </button>
+
+                    </form>
+
+                </div>
+
+            </div>
+
+
+
+        </div>
+
+    </nav>
+
+    {% block main %}
+
+
+
+
+
+
+
+    {% endblock %}
+
+    </body>
+
+</html>

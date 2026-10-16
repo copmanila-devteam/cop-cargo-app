@@ -1,0 +1,415 @@
+    .navbar-nav .nav-link {
+
+            color: #64748b;
+
+            font-size: 14px;
+
+        }
+
+
+
+        .navbar-nav .nav-link:hover {
+
+            background-color: #f8fafc;
+
+            color: var(--emerald-600);
+
+            transform: translateY(-1px);
+
+        }
+
+
+
+        .navbar-nav .nav-link.active {
+
+            background-color: var(--emerald-50);
+
+            color: var(--emerald-700);
+
+        }
+
+
+
+        /* Fix for navbar collapse - prevent content overlap */
+
+        @media (max-width: 991px) {
+
+            .navbar {
+
+                height: auto; /* Remove fixed height on mobile */
+
+                min-height: 70px;
+
+            }
+
+            
+
+            .navbar-collapse {
+
+                background-color: rgba(255, 255, 255, 0.98);
+
+                border-radius: 0 0 16px 16px;
+
+                margin-top: 0.5rem;
+
+                padding: 1rem 0;
+
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+
+            }
+
+            
+
+            .navbar-nav {
+
+                margin-top: 0;
+
+                margin-bottom: 1rem;
+
+            }
+
+            
+
+            .navbar-nav .nav-item {
+
+                width: 100%;
+
+                margin-bottom: 0.25rem;
+
+            }
+
+            
+
+            .navbar-nav .nav-link {
+
+                width: 100%;
+
+                text-align: left;
+
+                padding: 0.75rem 1rem !important;
+
+                margin: 0 0.5rem;
+
+                border-radius: 10px;
+
+            }
+
+
+
+            /* Logout button on mobile */
+
+            #navbarNav > div[style*="max-width"] {
+
+                max-width: 100% !important;
+
+                padding: 0 0.5rem;
+
+                margin-top: 0.5rem;
+
+            }
+
+
+
+            #navbarNav > div[style*="max-width"] button {
+
+                width: 100%;
+
+            }
+
+        }
+
+
+
+        /* Smooth transition for collapse */
+
+        .navbar-collapse {
+
+            transition: all 0.3s ease-in-out;
+
+        }
+
+
+
+        .navbar-toggler {
+
+            border: none;
+
+            padding: 0.5rem;
+
+        }
+
+
+
+        .navbar-toggler:focus {
+
+            box-shadow: none;
+
+            outline: 2px solid var(--emerald-600);
+
+            outline-offset: 2px;
+
+            border-radius: 8px;
+
+        }
+
+        .photo-list-item {
+
+            background: white;
+
+            border: 1px solid #e2e8f0;
+
+            border-radius: 12px;
+
+            padding: 8px 12px;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: space-between;
+
+            animation: slideIn 0.3s ease-out forwards;
+
+        }
+
+        .photo-preview-sm {
+
+            width: 40px;
+
+            height: 40px;
+
+            border-radius: 8px;
+
+            object-fit: cover;
+
+        }
+
+        .file-name {
+
+            font-size: 13px;
+
+            font-weight: 600;
+
+            color: #334155;
+
+            max-width: 180px;
+
+            white-space: nowrap;
+
+            overflow: hidden;
+
+            text-overflow: ellipsis;
+
+        }
+
+        :root { --emerald-600: #059669; --emerald-700: #047857; --emerald-50: #ecfdf5; }
+
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e293b; padding-bottom: 3rem; }
+
+        .navbar { background-color: rgba(255, 255, 255, 0.9) !important; backdrop-filter: blur(10px); border-bottom: 1px solid #e2e8f0; height: 70px; }
+
+        .main-card { background: white; border: 1px solid #e2e8f0; border-radius: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); padding: 2rem; }
+
+        .section-header-icon { width: 32px; height: 32px; background-color: var(--emerald-50); color: var(--emerald-600); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+
+        .form-label { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: #94a3b8; margin-bottom: 0.5rem; margin-left: 4px; }
+
+        .form-control, .form-select { background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 0.75rem 1rem; font-weight: 500; transition: all 0.2s; }
+
+        .form-control:focus, .form-select:focus { background-color: white; border-color: var(--emerald-600); box-shadow: 0 0 0 4px rgba(5, 150, 105, 0.08); outline: none; }
+
+        .btn-emerald { background-color: var(--emerald-600); color: white; border: none; border-radius: 14px; padding: 0.8rem 1.5rem; font-weight: 700; transition: all 0.2s; }
+
+        .btn-emerald:hover { background-color: var(--emerald-700); color: white; transform: translateY(-1px); }
+
+        .btn-emerald:disabled { background-color: #94a3b8; transform: none; cursor: not-allowed; }
+
+        .passenger-card { background: white; border: 1px solid #f1f5f9; border-radius: 14px; transition: all 0.2s; }
+
+        .index-badge { width: 36px; height: 36px; background-color: #f8fafc; color: #94a3b8; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 800; }
+
+        .alert-container { position: fixed; top: 90px; right: 20px; z-index: 2000; width: 100%; max-width: 350px; }
+
+        .border-dashed { border: 2px dashed #e2e8f0 !important; }
+
+        .animate-slide-in { animation: slideIn 0.3s ease-out forwards; }
+
+        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        
+
+        /* Attendee selection styles */
+
+        .attendee-item {
+
+            background: white;
+
+            border: 1px solid #e2e8f0;
+
+            border-radius: 12px;
+
+            padding: 12px;
+
+            cursor: pointer;
+
+            transition: all 0.2s;
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 12px;
+
+        }
+
+        .attendee-item:hover {
+
+            background-color: #f8fafc;
+
+            border-color: var(--emerald-600);
+
+            transform: translateX(4px);
+
+        }
+
+        .attendee-item.selected {
+
+            background-color: var(--emerald-50);
+
+            border-color: var(--emerald-600);
+
+        }
+
+        .attendee-checkbox {
+
+            width: 20px;
+
+            height: 20px;
+
+            border: 2px solid #cbd5e1;
+
+            border-radius: 6px;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            flex-shrink: 0;
+
+        }
+
+        .attendee-item.selected .attendee-checkbox {
+
+            background-color: var(--emerald-600);
+
+            border-color: var(--emerald-600);
+
+        }
+
+        .search-box {
+
+            position: relative;
+
+            margin-bottom: 1rem;
+
+        }
+
+        .search-icon {
+
+            position: absolute;
+
+            left: 12px;
+
+            top: 50%;
+
+            transform: translateY(-50%);
+
+            color: #94a3b8;
+
+        }
+
+        .search-box input {
+
+            padding-left: 40px;
+
+        }
+
+        .tab-pills {
+
+            display: flex;
+
+            gap: 8px;
+
+            margin-bottom: 1rem;
+
+            padding: 4px;
+
+            background: #f8fafc;
+
+            border-radius: 12px;
+
+        }
+
+        .tab-pill {
+
+            flex: 1;
+
+            padding: 8px 12px;
+
+            border: none;
+
+            background: transparent;
+
+            border-radius: 8px;
+
+            font-weight: 600;
+
+            font-size: 13px;
+
+            color: #64748b;
+
+            transition: all 0.2s;
+
+        }
+
+        .tab-pill.active {
+
+            background: white;
+
+            color: var(--emerald-600);
+
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+
+        }
+
+        .attendee-list-container {
+
+            max-height: 400px;
+
+            overflow-y: auto;
+
+        }
+
+        .attendee-list-container::-webkit-scrollbar {
+
+            width: 6px;
+
+        }
+
+        .attendee-list-container::-webkit-scrollbar-track {
+
+            background: #f1f5f9;
+
+            border-radius: 10px;
+
+        }
+
+        .attendee-list-container::-webkit-scrollbar-thumb {
+
+            background: #cbd5e1;
+
+            border-radius: 10px;
+
+        }

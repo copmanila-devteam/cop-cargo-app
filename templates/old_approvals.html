@@ -1,0 +1,1661 @@
+{% load static %}
+
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Pastors Approvals</title>
+
+    
+
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
+    
+
+    <style>
+
+        :root {
+
+            --primary-color: #4f46e5;
+
+            --success-color: #10b981;
+
+            --warning-color: #f59e0b;
+
+            --card-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+
+        }
+
+        
+
+        body {
+
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+            min-height: 100vh;
+
+            padding: 1rem 0;
+
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+
+        }
+
+        
+
+        .main-container { 
+
+            max-width: 1400px; 
+
+            margin: 0 auto; 
+
+            padding: 0 0.75rem; 
+
+        }
+
+        
+
+        .page-header {
+
+            background: white; 
+
+            border-radius: 12px; 
+
+            padding: 1rem 1.25rem;
+
+            margin-bottom: 1.5rem; 
+
+            box-shadow: var(--card-shadow);
+
+            display: flex; 
+
+            flex-direction: column;
+
+            gap: 1rem;
+
+        }
+
+
+
+        .page-header h1 {
+
+            font-size: 1.25rem;
+
+            margin: 0;
+
+        }
+
+
+
+        .header-actions {
+
+            display: flex;
+
+            gap: 0.5rem;
+
+            flex-wrap: wrap;
+
+        }
+
+
+
+        .stat-card {
+
+            background: white; 
+
+            border-radius: 12px; 
+
+            padding: 1rem;
+
+            box-shadow: var(--card-shadow); 
+
+            transition: transform 0.3s ease;
+
+            height: 100%;
+
+        }
+
+
+
+        .stat-card h2 {
+
+            font-size: 1.75rem;
+
+        }
+
+
+
+        .stat-card .small {
+
+            font-size: 0.75rem;
+
+        }
+
+        
+
+        .table-card { 
+
+            background: white; 
+
+            border-radius: 12px; 
+
+            padding: 1rem; 
+
+            box-shadow: var(--card-shadow); 
+
+            overflow-x: auto;
+
+        }
+
+        
+
+        .id-badge {
+
+            background: #3b82f6; 
+
+            color: white; 
+
+            padding: 0.2rem 0.5rem;
+
+            border-radius: 6px; 
+
+            font-weight: 600; 
+
+            font-size: 0.75rem;
+
+            white-space: nowrap;
+
+        }
+
+
+
+        .btn-approve {
+
+            background: linear-gradient(135deg, var(--success-color) 0%, #059669 100%);
+
+            color: white; 
+
+            border: none; 
+
+            padding: 0.4rem 0.8rem; 
+
+            border-radius: 6px;
+
+            font-size: 0.8rem; 
+
+            transition: all 0.2s;
+
+            white-space: nowrap;
+
+        }
+
+        
+
+        .btn-approve:hover { 
+
+            transform: translateY(-1px); 
+
+            box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3); 
+
+            color: white; 
+
+        }
+
+
+
+        .btn-reject {
+
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+
+            color: white; 
+
+            border: none; 
+
+            padding: 0.4rem 0.8rem; 
+
+            border-radius: 6px;
+
+            font-size: 0.8rem; 
+
+            transition: all 0.2s;
+
+            white-space: nowrap;
+
+        }
+
+        
+
+        .btn-reject:hover { 
+
+            transform: translateY(-1px); 
+
+            box-shadow: 0 4px 6px rgba(239, 68, 68, 0.3); 
+
+            color: white; 
+
+        }
+
+
+
+        .voucher-preview {
+
+            width: 50px; 
+
+            height: 50px; 
+
+            object-fit: cover; 
+
+            border-radius: 8px; 
+
+            cursor: pointer; 
+
+            border: 1px solid #ddd;
+
+        }
+
+
+
+        .image-gallery {
+
+            display: grid;
+
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+
+            gap: 0.75rem;
+
+            margin-top: 1rem;
+
+        }
+
+
+
+        .image-gallery-item {
+
+            position: relative;
+
+            border-radius: 8px;
+
+            overflow: hidden;
+
+            border: 2px solid #e5e7eb;
+
+            transition: transform 0.2s, box-shadow 0.2s;
+
+        }
+
+
+
+        .image-gallery-item:hover {
+
+            transform: scale(1.05);
+
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+        }
+
+
+
+        .image-gallery-item img {
+
+            width: 100%;
+
+            height: 150px;
+
+            object-fit: cover;
+
+            display: block;
+
+        }
+
+
+
+        .image-counter {
+
+            position: absolute;
+
+            top: 0.5rem;
+
+            right: 0.5rem;
+
+            background: rgba(0, 0, 0, 0.7);
+
+            color: white;
+
+            padding: 0.25rem 0.5rem;
+
+            border-radius: 4px;
+
+            font-size: 0.75rem;
+
+            font-weight: 600;
+
+        }
+
+
+
+        .confirmation-modal-icon {
+
+            width: 80px;
+
+            height: 80px;
+
+            margin: 0 auto 1rem;
+
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+
+            border-radius: 50%;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            font-size: 2.5rem;
+
+            color: white;
+
+        }
+
+
+
+        /* Mobile-specific DataTable adjustments */
+
+        @media (max-width: 768px) {
+
+            body {
+
+                padding: 0.5rem 0;
+
+            }
+
+
+
+            .main-container {
+
+                padding: 0 0.5rem;
+
+            }
+
+
+
+            .page-header {
+
+                padding: 0.875rem 1rem;
+
+                margin-bottom: 1rem;
+
+                border-radius: 10px;
+
+            }
+
+
+
+            .page-header h1 {
+
+                font-size: 1.1rem;
+
+            }
+
+
+
+            .header-actions {
+
+                width: 100%;
+
+            }
+
+
+
+            .header-actions button {
+
+                flex: 1;
+
+                font-size: 0.875rem;
+
+            }
+
+
+
+            .stat-card {
+
+                padding: 0.875rem;
+
+            }
+
+
+
+            .stat-card h2 {
+
+                font-size: 1.5rem;
+
+            }
+
+
+
+            .table-card {
+
+                padding: 0.75rem;
+
+                border-radius: 10px;
+
+            }
+
+
+
+            /* Make table responsive */
+
+            #cashierTable {
+
+                font-size: 0.85rem;
+
+            }
+
+
+
+            #cashierTable thead th {
+
+                padding: 0.5rem 0.25rem;
+
+                font-size: 0.75rem;
+
+            }
+
+
+
+            #cashierTable tbody td {
+
+                padding: 0.5rem 0.25rem;
+
+                vertical-align: middle;
+
+            }
+
+
+
+            /* Stack action buttons vertically on very small screens */
+
+            .action-buttons {
+
+                display: flex;
+
+                flex-direction: column;
+
+                gap: 0.25rem;
+
+            }
+
+
+
+            .action-buttons .btn,
+
+            .action-buttons .btn-approve,
+
+            .action-buttons .btn-reject {
+
+                font-size: 0.75rem;
+
+                padding: 0.3rem 0.5rem;
+
+            }
+
+
+
+            .voucher-preview {
+
+                width: 40px;
+
+                height: 40px;
+
+            }
+
+
+
+            .id-badge {
+
+                font-size: 0.7rem;
+
+                padding: 0.15rem 0.4rem;
+
+            }
+
+
+
+            /* DataTable controls */
+
+            .dataTables_wrapper .dataTables_length,
+
+            .dataTables_wrapper .dataTables_filter,
+
+            .dataTables_wrapper .dataTables_info,
+
+            .dataTables_wrapper .dataTables_paginate {
+
+                font-size: 0.85rem;
+
+            }
+
+
+
+            .dataTables_wrapper .dataTables_filter input {
+
+                width: 100% !important;
+
+                margin-left: 0 !important;
+
+                margin-top: 0.5rem;
+
+            }
+
+
+
+            /* Modal adjustments */
+
+            .modal-body {
+
+                padding: 1rem;
+
+            }
+
+
+
+            .modal-body table {
+
+                font-size: 0.875rem;
+
+            }
+
+
+
+            .modal-body .row {
+
+                flex-direction: column;
+
+            }
+
+
+
+            .modal-body .col-md-5 {
+
+                border-left: none !important;
+
+                border-top: 1px solid #dee2e6;
+
+                margin-top: 1rem;
+
+                padding-top: 1rem;
+
+            }
+
+
+
+            .confirmation-modal-icon {
+
+                width: 60px;
+
+                height: 60px;
+
+                font-size: 2rem;
+
+            }
+
+        }
+
+
+
+        /* Rejection modal styling */
+
+        .rejection-modal-icon {
+
+            width: 80px;
+
+            height: 80px;
+
+            margin: 0 auto 1rem;
+
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+
+            border-radius: 50%;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            font-size: 2.5rem;
+
+            color: white;
+
+        }
+
+
+
+        @media (max-width: 768px) {
+
+            .rejection-modal-icon {
+
+                width: 60px;
+
+                height: 60px;
+
+                font-size: 2rem;
+
+            }
+
+        }
+
+
+
+        /* Very small screens */
+
+        @media (max-width: 576px) {
+
+            .page-header h1 i {
+
+                display: none;
+
+            }
+
+
+
+            #cashierTable {
+
+                font-size: 0.75rem;
+
+            }
+
+
+
+            #cashierTable thead th {
+
+                font-size: 0.7rem;
+
+            }
+
+        }
+
+
+
+        /* Landscape orientation for phones */
+
+        @media (max-width: 768px) and (orientation: landscape) {
+
+            .stat-card h2 {
+
+                font-size: 1.25rem;
+
+            }
+
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+    <div class="main-container" data-controller="cashier-table">
+
+        <div class="page-header">
+
+            <h1 class="d-flex align-items-center gap-2">
+
+                <i class="bi bi-shield-check text-primary"></i> Pastors Approvals
+
+            </h1>
+
+            <div class="header-actions">
+
+                <button class="btn btn-outline-primary" data-action="click->cashier-table#loadCashiers">
+
+                    <i class="bi bi-arrow-clockwise"></i> Refresh
+
+                </button>
+
+                <form action="{% url 'logout-cargo' %}" method="post" class="m-0 flex-grow-1">
+
+                    {% csrf_token %} 
+
+                    <button class="btn btn-danger w-100" type="submit">
+
+                        <i class="bi bi-box-arrow-right"></i> Logout
+
+                    </button>
+
+                </form>
+
+            </div>
+
+        </div>
+
+
+
+        <div class="row g-2 g-md-3 mb-3 mb-md-4">
+
+            <div class="col-6 col-md-4">
+
+                <div class="stat-card">
+
+                    <div class="text-muted small text-uppercase fw-bold">Pending My Approval</div>
+
+                    <h2 class="mb-0 text-primary" data-cashier-table-target="pendingCount">0</h2>
+
+                </div>
+
+            </div>
+
+            <div class="col-6 col-md-4">
+
+                <div class="stat-card">
+
+                    <div class="text-muted small text-uppercase fw-bold">Total Processed</div>
+
+                    <h2 class="mb-0 text-success" data-cashier-table-target="approvedCount">0</h2>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <div class="table-card">
+
+            <div id="loadingSpinner" class="text-center py-4 py-md-5">
+
+                <div class="spinner-border text-primary" role="status"></div>
+
+                <p class="mt-2 text-muted small">Fetching records...</p>
+
+            </div>
+
+
+
+            <table id="cashierTable" class="table table-hover w-100" style="display:none;">
+
+                <thead>
+
+                    <tr>
+
+                        <th>ID</th>
+
+                        <th>Leader</th>
+
+                        <th>Date</th>
+
+                        <th>Plate No.</th>
+
+                        <!-- <th>Voucher</th> -->
+
+                        <th>Location</th>
+
+                        <th>Campus</th>
+
+                        <th>Action</th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody data-cashier-table-target="tbody">
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- Details Modal -->
+
+    <div class="modal fade" id="detailsModal" tabindex="-1" aria-hidden="true">
+
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+
+            <div class="modal-content">
+
+                <div class="modal-header bg-dark text-white">
+
+                    <h5 class="modal-title"><i class="bi bi-info-circle me-2"></i>Review Request</h5>
+
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+
+                </div>
+
+                <div id="modalContent" class="modal-body">
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- Confirmation Modal -->
+
+    <div class="modal fade" id="confirmApprovalModal" tabindex="-1" aria-hidden="true">
+
+        <div class="modal-dialog modal-dialog-centered">
+
+            <div class="modal-content">
+
+                <div class="modal-body text-center py-4">
+
+                    <div class="confirmation-modal-icon">
+
+                        <i class="bi bi-check-circle"></i>
+
+                    </div>
+
+                    <h5 class="mb-3">Confirm Approval</h5>
+
+                    <p class="text-muted mb-4">Are you sure you want to approve this request?</p>
+
+                    <div class="d-flex gap-2 justify-content-center">
+
+                        <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">
+
+                            <i class="bi bi-x-lg me-1"></i> Cancel
+
+                        </button>
+
+                        <button type="button" class="btn btn-success px-4" id="confirmApproveBtn">
+
+                            <i class="bi bi-check-lg me-1"></i> Yes, Approve
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <!-- Rejection Modal -->
+
+    <div class="modal fade" id="confirmRejectionModal" tabindex="-1" aria-hidden="true">
+
+        <div class="modal-dialog modal-dialog-centered">
+
+            <div class="modal-content">
+
+                <div class="modal-body text-center py-4">
+
+                    <div class="rejection-modal-icon">
+
+                        <i class="bi bi-x-circle"></i>
+
+                    </div>
+
+                    <h5 class="mb-3">Confirm Rejection</h5>
+
+                    <p class="text-muted mb-4">Are you sure you want to reject this request?</p>
+
+                    <div class="d-flex gap-2 justify-content-center">
+
+                        <button type="button" class="btn btn-secondary px-4" data-bs-dismiss="modal">
+
+                            <i class="bi bi-arrow-left me-1"></i> Cancel
+
+                        </button>
+
+                        <button type="button" class="btn btn-danger px-4" id="confirmRejectBtn">
+
+                            <i class="bi bi-x-lg me-1"></i> Yes, Reject
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+
+
+
+    <script type="module">
+
+        import { Application, Controller } from "https://unpkg.com/@hotwired/stimulus/dist/stimulus.js";
+
+        window.Stimulus = Application.start();
+
+
+
+        class CashierTableController extends Controller {
+
+            static targets = ["tbody", "pendingCount", "approvedCount"];
+
+            
+
+            connect() {
+
+                this.dataTable = null;
+
+                this.loadCashiers();
+
+            }
+
+
+
+            async loadCashiers() {
+
+                try {
+
+                    const response = await fetch('/api/list/');
+
+                    const data = await response.json();
+
+                    
+
+                    if (response.ok) {
+
+                        window.allCashierData = data.cashiers; 
+
+                        
+
+                        this.pendingCountTarget.textContent = data.stats.pending;
+
+                        this.approvedCountTarget.textContent = data.stats.approved;
+
+                        this.renderTable(data.cashiers);
+
+                    } else {
+
+                        console.error("API Error:", data);
+
+                        alert("Failed to load data. Please refresh the page.");
+
+                    }
+
+                } catch (error) {
+
+                    console.error("Fetch error:", error);
+
+                    alert("Network error. Please check your connection.");
+
+                }
+
+            }
+
+
+
+            renderTable(cashiers) {
+
+                if (this.dataTable) { this.dataTable.destroy(); }
+
+
+
+                document.getElementById('loadingSpinner').style.display = 'none';
+
+                document.getElementById('cashierTable').style.display = 'table';
+
+
+
+                this.tbodyTarget.innerHTML = cashiers.map(c => `
+
+                    <tr>
+
+                        <td><span class="id-badge">#${c.id}</span></td>
+
+                        <td><strong>${c.leader_first_name} ${c.leader_last_name}</strong></td>
+
+                        <td>${this.formatDateForTable(c.date)}</td>
+
+                        <td>${c.plate_num || '-'}</td>
+
+                       
+
+                        <td>${c.start_location || '-'}</td>
+
+                        <td>${c.campus || '-'}</td>
+
+                        <td>
+
+                            <div class="action-buttons">
+
+                                <button class="btn btn-sm btn-info text-white" onclick="showDetails(${c.id})">
+
+                                    <i class="bi bi-eye"></i> Details
+
+                                </button>
+
+                                <button class="btn-approve" onclick="showApprovalConfirmation(${c.id})">
+
+                                    <i class="bi bi-check-lg"></i> Approve
+
+                                </button>
+
+                                <button class="btn-reject" onclick="showRejectionConfirmation(${c.id})">
+
+                                    <i class="bi bi-x-lg"></i> Reject
+
+                                </button>
+
+                            </div>
+
+                        </td>
+
+                    </tr>
+
+                `).join('');
+
+
+
+                this.dataTable = $('#cashierTable').DataTable({ 
+
+                    order: [[0, 'desc']], 
+
+                    pageLength: 10,
+
+                    responsive: true,
+
+                    language: {
+
+                        search: "_INPUT_",
+
+                        searchPlaceholder: "Search records..."
+
+                    }
+
+                });
+
+            }
+
+
+
+            formatDateForTable(dateString) {
+
+                if (!dateString) return '-';
+
+                const date = new Date(dateString);
+
+                const options = { year: 'numeric', month: 'long', day: 'numeric' };
+
+                return date.toLocaleDateString('en-US', options);
+
+            }
+
+        }
+
+        Stimulus.register("cashier-table", CashierTableController);
+
+    </script>
+
+
+
+    <script>
+
+        let pendingApprovalId = null;
+
+        let pendingRejectionId = null;
+
+
+
+        // Format date to "January 4, 2026" format
+
+        function formatDate(dateString) {
+
+            if (!dateString) return 'N/A';
+
+            const date = new Date(dateString);
+
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+
+            return date.toLocaleDateString('en-US', options);
+
+        }
+
+
+
+        // Format datetime to "January 4, 2026, 2:30 PM" format
+
+        // Parse as local time to avoid timezone conversion
+
+        function formatDateTime(datetimeString) {
+
+            if (!datetimeString) return 'N/A';
+
+            
+
+            // Parse the datetime string as local time (not UTC)
+
+            // Format: "2026-01-14 15:58:46"
+
+            const parts = datetimeString.split(/[- :]/);
+
+            const year = parseInt(parts[0]);
+
+            const month = parseInt(parts[1]) - 1; // Months are 0-indexed
+
+            const day = parseInt(parts[2]);
+
+            const hour = parseInt(parts[3]);
+
+            const minute = parseInt(parts[4]);
+
+            const second = parseInt(parts[5]);
+
+            
+
+            // Create date object using local time
+
+            const date = new Date(year, month, day, hour, minute, second);
+
+            
+
+            const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+
+            const timeOptions = { hour: 'numeric', minute: '2-digit', hour12: true };
+
+            const datePart = date.toLocaleDateString('en-US', dateOptions);
+
+            const timePart = date.toLocaleTimeString('en-US', timeOptions);
+
+            return `${datePart}, ${timePart}`;
+
+        }
+
+
+
+        function showDetails(id) {
+
+            const targetId = Number(id);
+
+            
+
+            if (!window.allCashierData) {
+
+                console.error("Data storage 'window.allCashierData' is empty.");
+
+                alert("Data is still loading, please try again in a second.");
+
+                return;
+
+            }
+
+
+
+            const d = window.allCashierData.find(item => Number(item.id) === targetId);
+
+
+
+            if (!d) {
+
+                console.error("Could not find record with ID:", targetId);
+
+                alert("Record not found. Please refresh the page.");
+
+                return;
+
+            }
+
+
+
+            const modalElement = document.getElementById('detailsModal');
+
+            const modal = new bootstrap.Modal(modalElement);
+
+            const content = document.getElementById('modalContent');
+
+            
+
+            // Generate image gallery HTML
+
+            let imageGalleryHTML = '';
+
+            if (d.images && d.images.length > 0) {
+
+                imageGalleryHTML = `
+
+                    <div class="image-gallery">
+
+                        ${d.images.map((imgUrl, index) => `
+
+                            <div class="image-gallery-item">
+
+                                <a href="${imgUrl}" target="_blank">
+
+                                    <img src="${imgUrl}" alt="Voucher ${index + 1}">
+
+                                    <span class="image-counter">${index + 1}/${d.images.length}</span>
+
+                                </a>
+
+                            </div>
+
+                        `).join('')}
+
+                    </div>
+
+                    <p class="small text-muted mt-2 text-center">
+
+                        <i class="bi bi-zoom-in"></i> Click any image to view full size
+
+                    </p>
+
+                `;
+
+            } else {
+
+                imageGalleryHTML = '<div class="alert alert-light text-center py-4 text-muted"><i class="bi bi-image"></i><br>No images uploaded</div>';
+
+            }
+
+
+
+            // Generate users list HTML
+
+            let usersListHTML = '';
+
+            if (d.users && d.users.length > 0) {
+
+                usersListHTML = `
+
+                    <div class="users-list">
+
+                        ${d.users.map((user, index) => `
+
+                            <div class="user-item">
+
+                                <span class="user-number">COP ID: ${user.cop_id}</span>
+
+                                <span><strong>${user.full_name}</strong></span>
+
+                            </div>
+
+                        `).join('')}
+
+                    </div>
+
+                `;
+
+            } else {
+
+                usersListHTML = '<div class="alert alert-light text-center py-3 text-muted"><i class="bi bi-people"></i><br>No attendees listed</div>';
+
+            }
+
+
+
+            content.innerHTML = `
+
+                <div class="row">
+
+                    <div class="col-md-7">
+
+                        <h6 class="text-primary border-bottom pb-2 mb-3">Entry Information</h6>
+
+                        <table class="table table-sm table-borderless">
+
+                            <tr><td class="text-muted" style="width: 40%">Leader:</td><td><strong>${d.leader_first_name} ${d.leader_last_name}</strong></td></tr>
+
+                            <tr><td class="text-muted">Origin:</td><td>${d.start_location || 'N/A'}</td></tr>
+
+                            <tr><td class="text-muted">Destination:</td><td>${d.campus || 'N/A'}</td></tr>
+
+                            <tr><td class="text-muted">Date:</td><td>${formatDate(d.date) || 'N/A'}</td></tr>
+
+                            <tr><td class="text-muted">Service Schedule:</td><td>${d.service_schedule || 'N/A'}</td></tr>
+
+                            <tr><td class="text-muted">Vehicle:</td><td>${d.vehicle || 'N/A'}</td></tr>
+
+                            <tr><td class="text-muted">Plate Number:</td><td>${d.plate_num || 'N/A'}</td></tr>
+
+                            <tr><td class="text-muted">Subsidy Type:</td><td>${d.subsidy_type || 'N/A'}</td></tr>
+
+                            <tr><td class="text-muted">Time Arrived:</td><td>${formatDateTime(d.time_arrived) || 'N/A'}</td></tr>
+
+                            <tr><td class="text-muted">Remarks:</td><td>${d.remarks || ''}</td></tr>
+
+                        </table>
+
+
+
+                        <h6 class="text-primary border-bottom pb-2 mb-3 mt-4">
+
+                            Attendees ${d.users && d.users.length > 0 ? `<span class="badge bg-primary">${d.users.length}</span>` : ''}
+
+                        </h6>
+
+                        ${usersListHTML}
+
+                    </div>
+
+                    <div class="col-md-5 border-start">
+
+                        <h6 class="text-primary border-bottom pb-2 mb-3">
+
+                            Photos ${d.images && d.images.length > 0 ? `<span class="badge bg-primary">${d.images.length}</span>` : ''}
+
+                        </h6>
+
+                        ${imageGalleryHTML}
+
+                    </div>
+
+                </div>
+
+                <div class="mt-3 pt-3 border-top d-flex flex-column flex-sm-row justify-content-end gap-2">
+
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">
+
+                        <i class="bi bi-x-circle me-1"></i>Close
+
+                    </button>
+
+                    <button class="btn btn-danger" onclick="rejectDirectly(${d.id})">
+
+                        <i class="bi bi-x-lg me-1"></i> Reject
+
+                    </button>
+
+                    <button class="btn btn-success" onclick="approveDirectly(${d.id})">
+
+                        <i class="bi bi-check-lg me-1"></i> Approve Now
+
+                    </button>
+
+                </div>`;
+
+
+
+            modal.show();
+
+        }
+
+
+
+        function showApprovalConfirmation(id) {
+
+            pendingApprovalId = id;
+
+            const confirmModal = new bootstrap.Modal(document.getElementById('confirmApprovalModal'));
+
+            confirmModal.show();
+
+        }
+
+
+
+        function showRejectionConfirmation(id) {
+
+            pendingRejectionId = id;
+
+            const confirmModal = new bootstrap.Modal(document.getElementById('confirmRejectionModal'));
+
+            confirmModal.show();
+
+        }
+
+
+
+        document.getElementById('confirmApproveBtn').addEventListener('click', async function() {
+
+            if (pendingApprovalId === null) return;
+
+
+
+            const confirmModal = bootstrap.Modal.getInstance(document.getElementById('confirmApprovalModal'));
+
+            confirmModal.hide();
+
+
+
+            try {
+
+                const response = await fetch(`/${pendingApprovalId}/approve/`, {
+
+                    method: 'POST',
+
+                    headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+
+                });
+
+                
+
+                if (response.ok) {
+
+                    const detailsModal = bootstrap.Modal.getInstance(document.getElementById('detailsModal'));
+
+                    if (detailsModal) {
+
+                        detailsModal.hide();
+
+                    }
+
+                    
+
+                    const ctrl = document.querySelector('[data-controller="cashier-table"]');
+
+                    const instance = Stimulus.getControllerForElementAndIdentifier(ctrl, 'cashier-table');
+
+                    instance.loadCashiers();
+
+                    
+
+                    pendingApprovalId = null;
+
+                } else {
+
+                    alert("Approval failed. Please try again.");
+
+                }
+
+            } catch (e) {
+
+                console.error(e);
+
+                alert("An error occurred. Please try again.");
+
+            }
+
+        });
+
+
+
+        document.getElementById('confirmRejectBtn').addEventListener('click', async function() {
+
+            if (pendingRejectionId === null) return;
+
+
+
+            const confirmModal = bootstrap.Modal.getInstance(document.getElementById('confirmRejectionModal'));
+
+            confirmModal.hide();
+
+
+
+            try {
+
+                const response = await fetch(`/${pendingRejectionId}/reject/`, {
+
+                    method: 'POST',
+
+                    headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+
+                });
+
+                
+
+                if (response.ok) {
+
+                    const detailsModal = bootstrap.Modal.getInstance(document.getElementById('detailsModal'));
+
+                    if (detailsModal) {
+
+                        detailsModal.hide();
+
+                    }
+
+                    
+
+                    const ctrl = document.querySelector('[data-controller="cashier-table"]');
+
+                    const instance = Stimulus.getControllerForElementAndIdentifier(ctrl, 'cashier-table');
+
+                    instance.loadCashiers();
+
+                    
+
+                    pendingRejectionId = null;
+
+                } else {
+
+                    alert("Rejection failed. Please try again.");
+
+                }
+
+            } catch (e) {
+
+                console.error(e);
+
+                alert("An error occurred. Please try again.");
+
+            }
+
+        });
+
+
+
+        async function approveDirectly(id) {
+
+            try {
+
+                const response = await fetch(`/${id}/approve/`, {
+
+                    method: 'POST',
+
+                    headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+
+                });
+
+                
+
+                if (response.ok) {
+
+                    const detailsModal = bootstrap.Modal.getInstance(document.getElementById('detailsModal'));
+
+                    if (detailsModal) {
+
+                        detailsModal.hide();
+
+                    }
+
+                    
+
+                    const ctrl = document.querySelector('[data-controller="cashier-table"]');
+
+                    const instance = Stimulus.getControllerForElementAndIdentifier(ctrl, 'cashier-table');
+
+                    instance.loadCashiers();
+
+                } else {
+
+                    alert("Approval failed. Please try again.");
+
+                }
+
+            } catch (e) {
+
+                console.error(e);
+
+                alert("An error occurred. Please try again.");
+
+            }
+
+        }
+
+
+
+        async function rejectDirectly(id) {
+
+            try {
+
+                const response = await fetch(`/${id}/reject/`, {
+
+                    method: 'POST',
+
+                    headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+
+                });
+
+                
+
+                if (response.ok) {
+
+                    const detailsModal = bootstrap.Modal.getInstance(document.getElementById('detailsModal'));
+
+                    if (detailsModal) {
+
+                        detailsModal.hide();
+
+                    }
+
+                    
+
+                    const ctrl = document.querySelector('[data-controller="cashier-table"]');
+
+                    const instance = Stimulus.getControllerForElementAndIdentifier(ctrl, 'cashier-table');
+
+                    instance.loadCashiers();
+
+                } else {
+
+                    alert("Rejection failed. Please try again.");
+
+                }
+
+            } catch (e) {
+
+                console.error(e);
+
+                alert("An error occurred. Please try again.");
+
+            }
+
+        }
+
+    </script>
+
+</body>
+
+</html>

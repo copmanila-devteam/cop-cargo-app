@@ -659,26 +659,21 @@ def verify_voucher(request, cashier_id):
 
 
 class CashierView(LoginRequiredMixin, View):
-
-    login_url = 'login-cargo'
-
-    
+    login_url = 'login-cargo'    
 
     def dispatch(self, request, *args, **kwargs):
 
         user = self.request.user
-
         if user.is_authenticated:
-
             # Note: Assuming Usertype is a mapping defined elsewhere in your code
-
             if user.type not in ['FI']:
-
                 return redirect(Usertype[user.type])
 
-        else: 
+        else:
+            # If the user is not authenticated, you might want to redirect them to the login page or show a 404 page. Adjust this as needed.
+            redirect_url = reverse('login-cargo')  # Assuming 'login-cargo' is the name of your login URL
 
-            return render(request, 'error_pages/404_page.html', status=404)
+            # return render(request, 'error_pages/404_page.html', status=404)
 
     
 

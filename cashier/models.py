@@ -269,6 +269,7 @@ class Cashier(models.Model):
     time_arrived = models.DateTimeField(default=timezone.now, null=True)
 
     remarks = models.CharField(max_length=300, blank=True)
+    event = models.ForeignKey(Event, on_delete=models.SET_NULL, null=True, related_name='event')
 
     class Meta:
         db_table = 'cashier'

@@ -18,7 +18,7 @@ from django.core.exceptions import ValidationError
 
 from django.db.models import Q
 
-from .models import Cashier, Attendees, SubsidyType,Campus, Vehicle, ServiceSchedule, City
+from .models import Cashier, Attendees, Event, SubsidyType,Campus, Vehicle, ServiceSchedule, City
 
 
 
@@ -39,97 +39,53 @@ class MultipleFileInput(forms.ClearableFileInput):
 
 
 class CashierEntryForm(forms.ModelForm):
-
-   
+    events = forms.ModelChoiceField(
+        queryset=Event.objects.all(),
+        required=True,
+        widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_events'})
+    )
 
     service_schedule = forms.ModelChoiceField(
-
         queryset=ServiceSchedule.objects.all(),
-
         required=True,
-
         empty_label='Select Service Schedule',
-
         widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_service_schedule'})
-
     )
-
-
-
-   
 
     campus = forms.ModelChoiceField(
-
         required=True,
-
         empty_label='Select COP campus',
-
         queryset=Campus.objects.all(),
-
         widget=forms.Select(attrs={
-
             'class': 'form-control', 
-
             'id': 'id_campus',
-
             'data-action': 'change->trip-form#filterSchedules',
-
         })
-
     )
 
-
-
-
-
     start_location = forms.ModelChoiceField(
-
         required=True,
-
         empty_label='Select Origin',
-
         label='Origin',
-
         queryset=City.objects.all(),
-
         widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_start_location'}),
-
-       
-
     )
 
 
 
     subsidy_type = forms.ModelChoiceField(
-
         required=True,
-
         empty_label='Select Subsidy type',
-
         label="Subsidy Type*",
-
         queryset=SubsidyType.objects.all(),
-
         widget=forms.Select(attrs={'class': 'form-control'}))
 
-
-
-
-
     vehicle = forms.ModelChoiceField(
-
         required=True,
-
         empty_label='Select Vehicle',
-
         label="Vehicle Type*",
-
         queryset=Vehicle.objects.all(),
-
         widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_vehicle'})
-
-       
-
     )
 
     capacity=forms.IntegerField(
@@ -146,54 +102,29 @@ class CashierEntryForm(forms.ModelForm):
     # Using CharField with required=False prevents "No file submitted" errors
 
     photos = forms.CharField(
-
         required=False, 
-
         label="Upload Receipts/Photos*",
-
         widget=MultipleFileInput(attrs={
-
             'class': 'form-control',
-
             'multiple': True,
-
             'accept': 'image/*',
-
             'id': 'id_photos',
-
             'required':'required',
-
             'data-action': 'change->trip-form#previewImages'
-
         })
-
     )
 
 
 
-
-
-
-
-
-
     class Meta:
-
         model = Cashier
-
         # DO NOT put 'photos' in this list
 
-        fields = ['start_location', 'campus','capacity','service_schedule', 'vehicle', 'subsidy_type', 'plate_num']
+        fields = ['start_location', 'campus', 'events', 'capacity','service_schedule', 'vehicle', 'subsidy_type', 'plate_num']
 
         widgets = {
-
-         
-
             'plate_num': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex. ABC 123'}),
-
         }
-
-
 
     def __init__(self, *args, **kwargs):
 
@@ -204,13 +135,10 @@ class CashierEntryForm(forms.ModelForm):
         if 'campus' in self.data:
 
             try:
-
                 campus_id = int(self.data.get('campus'))
-
                 self.fields['service_schedule'].queryset = ServiceSchedule.objects.filter(campus_id=campus_id)
 
             except (ValueError, TypeError):
-
                 self.fields['service_schedule'].queryset = ServiceSchedule.objects.none()
 
 

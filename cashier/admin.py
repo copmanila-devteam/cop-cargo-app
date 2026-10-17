@@ -1,10 +1,17 @@
 from django.contrib import admin
 
 from .models import Vehicle, Campus, Attendees, Cashier, CashierUsers, City, SubsidyType, Matrix, ServiceSchedule, CashierImage, LeadersAttendees, CargoDetails, Voucher
+from .models import Event, RemarksList
 
+@admin.register(Event)
+class EventAdmin(admin.ModelAdmin):
+    list_display = ['name', 'start_date', 'end_date', 'description']
+    search_fields = ['name', 'start_date', 'end_date', 'description']
 
-
-
+@admin.register(RemarksList)
+class RemarksListAdmin(admin.ModelAdmin):
+    list_display = ['description', 'user', 'cashier', 'timestamp']
+    search_fields = ['description', 'user__first_name', 'user__last_name', 'cashier__leader__first_name', 'cashier__leader__last_name']
 
 @admin.register(Vehicle)
 
@@ -55,11 +62,8 @@ class CampusAdmin(admin.ModelAdmin):
 
 
 @admin.register(City)
-
 class CityAdmin(admin.ModelAdmin):
-
     list_display = ['name']
-
     search_fields = ['name']
 
 
@@ -69,21 +73,12 @@ class CityAdmin(admin.ModelAdmin):
 
 
 @admin.register(Matrix)
-
 class MatrixAdmin(admin.ModelAdmin):
-
     list_display = ['campus','city','vehicle', 'peso_price']
-
     search_fields = ['campus__name', 'city__name', 'vehicle__name']
 
 
-
-
-
-
-
 @admin.register(Attendees)
-
 class AttendeesAdmin(admin.ModelAdmin):
 
     # This makes the Attendees searchable (required for autocomplete)
@@ -93,29 +88,18 @@ class AttendeesAdmin(admin.ModelAdmin):
     list_display = ['first_name', 'last_name', 'cop_id']
 
     # This makes the COP ID editable directly from the main list view
-
     list_editable = ['cop_id']
 
 
 
 @admin.register(LeadersAttendees)
-
 class LeaderAttendeesAdmin(admin.ModelAdmin):
-
     list_display = ['attendee', 'leader']
-
     search_fields = ['attendee', 'leader']
 
-
-
-
-
 @admin.register(CargoDetails)
-
 class CargoDetailsAdmin(admin.ModelAdmin):
-
     list_display = ['cashier', 'cargo']
-
     search_fields = ['cashier', 'cargo']
 
 

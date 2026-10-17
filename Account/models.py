@@ -38,7 +38,8 @@ class UserType(AbstractUser):
 
           ('FI','Finance'),
 
-          ('LE','Leader')]
+          ('LE','Leader'),
+          ('ACNT','Accountant')]
 
         
     

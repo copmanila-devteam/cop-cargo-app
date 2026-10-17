@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cargo - Cashier Dashboard</title>
+    
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.dataTables.min.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    
+    <script type="module">
+        import { Application, Controller } from "https://unpkg.com/@hotwired/stimulus/dist/stimulus.js"
+        window.Stimulus = Application.start()
+
+        Stimulus.register("cashier", class extends Controller {
+            static targets = ["table", "loading", "error", "count", "modal", "detailContent"]
+
+            connect() {
+                this.fetchCashierData();
+                
+                this.tableTarget.addEventListener('click', (e) => {
+                    const btn = e.target.closest('.view-detail-btn');
+                    if (btn) {
+                        const id = btn.dataset.id;
+                        this.showDetails(id);
+                    }
+                });
+            }
+
+           async fetchCashierData() {
+            this.showLoading();
+            try {
+                const response = await fetch('/fetch_vouchers/', {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+
+                if (response.status === 401 || response.status === 403) {
+                    this.showError("Session expired. Please login again.");
+                    window.location.href = "/login/"; 
+                    return;
+                }
+
+                const contentType = response.headers.get("content-type");
+                if (!contentType || !contentType.includes("application/json")) {
+                    console.error("Expected JSON but got:", contentType);
+                    this.showError("Server returned an unexpected response. Please refresh manually.");
+                    return;
+                }
+
+                const data = await response.json();
+                if (data.status === 'success') {
+                    this.countTarget.textContent = data.count;
+                    console.log(data)
+                    this.initDataTable(data.data);
+                }
+            } catch (error) {
+                this.showError("Failed to load data. Please check your connection.");
+            } finally {
+                this.hideLoading();
+            }
+        }
+
+        initDataTable(cashierData) {
+            if ($.fn.DataTable.isDataTable(this.tableTarget)) {
+                $(this.tableTarget).DataTable().clear().destroy();
+            }
+            $(this.tableTarget).empty();
+            $(this.tableTarget).html('');
+        
+            const tableData = cashierData.map(entry => {
+                const leaderName = entry.leader ? `${entry.leader.first_name || ''} ${entry.leader.last_name || ''}`.trim() : 'N/A';
+                
+                const subsidyAmount = parseFloat(entry.subsidy_amount) || 0;
+                const amountReleased = parseFloat(entry.amount_released) || 0;
+                const remarks = entry.remarks || "";
+
+                const formatPHP = (num) => `₱${(parseFloat(num) || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                const voucher_code = entry.voucher;
+
+                // Status Badge
+                let statusBadge = '';
+                if (entry.rejected) {
+                    statusBadge = '<span class="badge bg-danger">REJECTED</span>';
+                } else if (entry.is_late) {
+                    statusBadge = '<span class="badge bg-secondary">LATE</span>';
+                } else if (amountReleased > 0) {
+                    statusBadge = '<span class="badge bg-success">APPROVED</span>';
+                } else {
+                    statusBadge = '<span class="badge bg-secondary">LATE</span>';
+                }
+
+                // ✅ Completed Badge
+                const completedBadge = entry.completed
+                    ? '<span class="completed-badge completed-yes" title="Completed">✔</span>'
+                    : '<span class="completed-badge completed-no" title="Not Completed">✗</span>';
+
+               
+                return [
+                    entry.row_num,
+                    `<strong>${leaderName}</strong>`,
+                    entry.date_time_arrived,
+                    (entry.campus && typeof entry.campus === 'object') ? entry.campus.name : (entry.campus_name || 'N/A'),
+                    formatPHP(subsidyAmount),
+                    `<span class="text-primary">${formatPHP(amountReleased)}</span>`,
+                    completedBadge,
+                    voucher_code,
+                    `<div class="d-flex gap-1 flex-wrap">
+                        <button class="view-detail-btn py-1 px-2" data-action="click->cashier#viewDetail" data-id="${entry.id}">
+                            <i class="fas fa-eye"></i> View
+                        </button>
+                        <button class="btn btn-sm btn-outline-info" data-id="${entry.id}" data-remarks='${JSON.stringify(remarks)}' onclick="window.openRemarksModal(this.dataset.id, JSON.parse(this.dataset.remarks))">
+                            <i class="fas fa-comment"></i> Remarks
+                        </button>
+                        
+                        ${entry.completed ? '' :
+                        `<button class="btn btn-sm btn-voucher-verify ${entry.completed ? 'btn-completed' : ''}" 
+                                onclick="window.openVoucherModal(${entry.id})"
+                                ${entry.completed ? 'disabled title="Already completed"' : 'title="Verify Voucher"'}>
+                            <i class="fas fa-ticket-alt"></i> ${entry.completed ? '' : 'Verify'}
+                        </button>`
+                          }   
+                    </div>`
+                ];
+            });
+
+            this.table = $(this.tableTarget).DataTable({
+                data: tableData,
+                columns: [
+                    { title: "Row" },
+                    { title: "Leader" },
+                    { title: "Date & Time Arrived"},
+                    { title: "Campus" },
+                    { title: "Subsidy Amount" },
+                    { title: "Amount Released" },
+                 
+                    { title: "Completed" },
+                    { title: "Voucher"},
+                    { title: "Actions", orderable: false }
+                ],
+                responsive: true,
+                pageLength: 25,
+                order: [[0, 'asc']],
+                columnDefs: [
+                    { className: "dt-center", targets: [0, 4, 5, 6, 8] }
+                ]
+            });
+        }
+
+        async showDetails(id) {
+                this.detailContentTarget.innerHTML = '<div class="modal-loading">Loading details...</div>'
+                this.modalTarget.classList.add('show')
+
+                try {
+                    const response = await fetch(`/accounting/${id}/details/`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch details')
+                    }
+
+                    const data = await response.json()
+                    
+                    if (data.status === 'success') {
+                        this.displayDetails(data.data)
+                    } else {
+                        this.detailContentTarget.innerHTML = `<div class="modal-error">${data.message}</div>`
+                    }
+                } catch (error) {
+                    console.error('Error fetching details:', error)
+                    this.detailContentTarget.innerHTML = '<div class="modal-error">Failed to load details. Please try again.</div>'
+                }
+            }
+
+            
+    displayDetails(data) {
+        const hasImages = data.images && data.images.length > 0;
+        
+        let formattedSchedule = 'N/A';
+        if (data.service_schedule) {
+            const campusName = data.campus ? data.campus.name : 'N/A';
+            const scheduleDay = data.service_schedule.day || '';
+            
+            let timeStr = data.service_schedule.time;
+            if (timeStr) {
+                const [hours, minutes] = timeStr.split(':');
+                let hour = parseInt(hours);
+                const ampm = hour >= 12 ? 'PM' : 'AM';
+                hour = hour % 12 || 12;
+                timeStr = `${hour}:${minutes} ${ampm}`;
+            }
+            
+            formattedSchedule = `${campusName} | ${scheduleDay} ${timeStr}`.trim();
+        }
+
+        const subsidyAmount = parseFloat(data.subsidy_amount) || 0;
+        const amountReleased = parseFloat(data.amount_released) || 0;
+
+        let statusColor, statusBg, statusText;
+        if (data.rejected) {
+            statusColor = "#e53e3e"; statusBg = "#fff5f5"; statusText = "REJECTED";
+        } else if (data.is_late) {
+            statusColor = "#718096"; statusBg = "#f7fafc"; statusText = "LATE";
+        } else if (amountReleased > 0) {
+            statusColor = "#38a169"; statusBg = "#f0fff4"; statusText = "APPROVED";
+        } else {
+            statusColor = "#d69e2e"; statusBg = "#fffaf0"; statusText = "PENDING";
+        }
+
+        this.detailContentTarget.innerHTML = `
+            <div class="modal-body-scroll">
+                <div class="detail-section" style="background: ${statusBg}; border-left: 5px solid ${statusColor};">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 style="color: ${statusColor}; margin:0;">Payment Summary</h5>
+                        <span class="badge" style="background: ${statusColor}">${statusText}</span>
+                    </div>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <span class="detail-label">Subsidy Amount</span>
+                            <span class="detail-value" style="font-size: 1.6rem; color: ${statusColor}; font-weight: 800;">
+                                ₱${subsidyAmount.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                            </span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Amount Released</span>
+                            <span class="detail-value" style="font-size: 1.6rem; color: ${statusColor}; font-weight: 800;">
+                                ₱${amountReleased.toLocaleString(undefined, {minimumFractionDigits: 2})}
+                            </span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Voucher Code</span>
+                            <span class="detail-value" style="font-size: 1.6rem; color: ${statusColor}; font-weight: 800;">
+                            ${data.voucher}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h5>Trip Information</h5>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <span class="detail-label">Leader</span>
+                            <span class="detail-value">${data.leader ? data.leader.first_name + ' ' + data.leader.last_name : 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Date</span>
+                            <span class="detail-value">${this.formatDate(data.date)}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Origin</span>
+                            <span class="detail-value">${data.start_location.name}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Destination</span>
+                            <span class="detail-value">${data.campus.name}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Subsidy Type</span>
+                            <span class="detail-value">${data.subsidy_type.name}</span>
+                        </div>
+                        <div class="detail-item" style="grid-column: span 2;">
+                            <span class="detail-label">Service Schedule</span>
+                            <span class="detail-value" style="color: #667eea; font-weight: 700;">${formattedSchedule}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Vehicle</span>
+                            <span class="detail-value">${data.vehicle ? data.vehicle.name : 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Plate Number</span>
+                            <span class="detail-value">${data.plate_num || 'N/A'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Remarks</span>
+                            <span class="detail-value">${data.remarks || 'N/A'}</span>
+                        </div>
+                        ${data.time_arrived ? `
+                            <div class="detail-item">
+                                <span class="detail-label">Actual Arrival</span>
+                                <span class="detail-value">${this.formatDateTime(data.time_arrived)}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h5>Passengers (${data.users ? data.users.length : 0})</h5>
+                    <div class="passengers-list">
+                        ${data.users && data.users.length > 0 ? `
+                            <div class="passenger-grid">
+                                ${data.users.map((u, idx) => `
+                                    <div class="passenger-card">
+                                        <div class="passenger-info">
+                                            <div class="passenger-name">COPID: ${u.cop_id} - Name: ${u.first_name} ${u.middle_name} ${u.last_name}</div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : '<div class="no-passengers">No passengers recorded</div>'}
+                    </div>
+                </div>
+
+                <div class="detail-section text-center">
+                    <h5>Photos (${hasImages ? data.images.length : 0})</h5>
+                    ${hasImages ? `
+                        <div class="photo-gallery">
+                            ${data.images.map((img, idx) => `
+                                <div class="photo-item">
+                                    <img src="${img.url}" class="img-fluid rounded voucher-preview" onclick="window.open('${img.url}', '_blank')">
+                                    <p class="photo-timestamp">${this.formatDateTime(img.uploaded_at)}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : `<div class="no-photo-placeholder">No photos uploaded</div>`}
+                </div>
+            </div>`;
+        }
+
+            formatDate(dateString) {
+                if (!dateString) return 'N/A'
+                try {
+                    const date = new Date(dateString)
+                    return date.toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric'
+                    })
+                } catch {
+                    return dateString
+                }
+            }
+
+            formatDateTime(dateTimeString) {
+                if (!dateTimeString) return 'N/A'
+                try {
+                    const date = new Date(dateTimeString)
+                    return date.toLocaleString('en-US', { 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    })
+                } catch {
+                    return dateTimeString
+                }
+            }
+
+            closeModal(event) {
+                if (event.target === this.modalTarget || event.target.closest('.close-btn')) {
+                    this.modalTarget.classList.remove('show')
+                }
+            }
+
+            showLoading() {
+                this.loadingTarget.classList.remove('hidden')
+                this.errorTarget.classList.add('hidden')
+            }
+
+            hideLoading() {
+                this.loadingTarget.classList.add('hidden')
+            }
+
+            showError(message) {
+                this.errorTarget.textContent = message
+                this.errorTarget.classList.remove('hidden')
+            }
+
+            refresh() {
+                this.fetchCashierData()
+            }
+        })
+
+        // ── Remarks Modal ──────────────────────────────────────────────
+        window.openRemarksModal = (id, currentRemarks) => {
+            document.getElementById('remarks_id').value = id;
+            document.getElementById('remarks_text').value = currentRemarks;
+            document.getElementById('remarksModal').classList.add('show');
+        };
+
+        // ── Amount Modal ───────────────────────────────────────────────
+        window.openAmountModal = (id, currentAmount, suggested) => {
+            document.getElementById('amount_id').value = id;
+            document.getElementById('amount_input').value = currentAmount;
+            document.getElementById('suggested_text').textContent = `Suggested Release: ₱${suggested.toLocaleString()}`;
+            document.getElementById('amountModal').classList.add('show');
+        };
+
+        // ── Voucher Verify Modal ───────────────────────────────────────
+        window.openVoucherModal = (id) => {
+            document.getElementById('voucher_cashier_id').value = id;
+            document.getElementById('voucher_code_input').value = '';
+            document.getElementById('voucher_error_msg').textContent = '';
+            document.getElementById('voucher_error_msg').classList.add('hidden');
+            document.getElementById('voucher_success_msg').textContent = '';
+            document.getElementById('voucher_success_msg').classList.add('hidden');
+            document.getElementById('voucherModal').classList.add('show');
+            setTimeout(() => document.getElementById('voucher_code_input').focus(), 100);
+        };
+
+        window.saveRemarks = async () => {
+            const id = document.getElementById('remarks_id').value;
+            const remarks = document.getElementById('remarks_text').value;
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+            try {
+                const response = await fetch(`/update_remarks/${id}/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({ remarks: remarks })
+                });
+
+                const data = await response.json();
+                if (data.status === 'success') {
+                    closeSpecificModal('remarksModal');
+                    const controller = document.querySelector('[data-controller="cashier"]');
+                    window.Stimulus.getControllerForElementAndIdentifier(controller, "cashier").refresh();
+                } else {
+                    alert("Error: " + data.message);
+                }
+            } catch (error) {
+                console.error("Failed to save remarks:", error);
+            }
+        };
+
+        window.saveAmount = async () => {
+            const id = document.getElementById('amount_id').value;
+            const amount = document.getElementById('amount_input').value;
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+            try {
+                const response = await fetch(`/update_amount/${id}/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({ amount_released: amount })
+                });
+
+                const data = await response.json();
+                if (data.status === 'success') {
+                    closeSpecificModal('amountModal');
+                    const controller = document.querySelector('[data-controller="cashier"]');
+                    window.Stimulus.getControllerForElementAndIdentifier(controller, "cashier").refresh();
+                } else {
+                    alert("Error: " + data.message);
+                }
+            } catch (error) {
+                console.error("Failed to update amount:", error);
+            }
+        };
+
+        // ── Voucher Verify Submit ──────────────────────────────────────
+        window.verifyVoucher = async () => {
+            const id = document.getElementById('voucher_cashier_id').value;
+            const voucherCode = document.getElementById('voucher_code_input').value.trim();
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            const errorEl = document.getElementById('voucher_error_msg');
+            const successEl = document.getElementById('voucher_success_msg');
+            const submitBtn = document.getElementById('voucher_submit_btn');
+
+            if (!voucherCode) {
+                errorEl.textContent = 'Please enter a voucher code.';
+                errorEl.classList.remove('hidden');
+                successEl.classList.add('hidden');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Verifying...';
+
+            try {
+                const response = await fetch(`/verify_voucher/${id}/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({ voucher_code: voucherCode })
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    errorEl.classList.add('hidden');
+                    successEl.textContent = '✔ Voucher verified! Entry marked as completed.';
+                    successEl.classList.remove('hidden');
+
+                    setTimeout(() => {
+                        closeSpecificModal('voucherModal');
+                        const controller = document.querySelector('[data-controller="cashier"]');
+                        window.Stimulus.getControllerForElementAndIdentifier(controller, "cashier").refresh();
+                    }, 1200);
+                } else {
+                    errorEl.textContent = '✗ ' + (data.message || 'Invalid voucher code.');
+                    errorEl.classList.remove('hidden');
+                    successEl.classList.add('hidden');
+                    // Shake input
+                    const input = document.getElementById('voucher_code_input');
+                    input.classList.add('input-shake');
+                    setTimeout(() => input.classList.remove('input-shake'), 500);
+                }
+            } catch (error) {
+                errorEl.textContent = 'Network error. Please try again.';
+                errorEl.classList.remove('hidden');
+                console.error("Failed to verify voucher:", error);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Verify Voucher';
+            }
+        };
+
+        // Allow Enter key to submit voucher
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && document.getElementById('voucherModal').classList.contains('show')) {
+                window.verifyVoucher();
+            }
+        });
+
+        window.closeSpecificModal = (modalId) => {
+            const modal = document.getElementById(modalId);
+            modal.classList.remove('show');
+        };
+    </script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #38a169 0%, #276749 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            width: 100%;
+        }
+        
+        .header-actions form {
+            margin-left: auto !important;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 28px;
+        }
+
+        .count-badge {
+            background: #38a169;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .refresh-btn, .logout-btn {
+            background: #38a169;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        .logout-btn {
+            background: #e53e3e;
+        }
+
+        .refresh-btn:hover { background: #5568d3; }
+        .logout-btn:hover { background: #c53030; }
+
+        .loading, .error {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .loading { color: #667eea; font-weight: 600; }
+        .error { color: #e53e3e; background: #fff5f5; border: 1px solid #fc8181; }
+
+        .hidden { display: none; }
+
+        .table-wrapper {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        table.dataTable { width: 100% !important; }
+
+        /* ── Completed badges ── */
+        .completed-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            font-size: 15px;
+            font-weight: 800;
+            cursor: default;
+        }
+        .completed-yes {
+            background: #c6f6d5;
+            color: #276749;
+            border: 2px solid #68d391;
+        }
+        .completed-no {
+            background: #fed7d7;
+            color: #9b2335;
+            border: 2px solid #fc8181;
+        }
+
+        /* ── Action Buttons ── */
+        .view-detail-btn {
+            background: #48bb78;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .view-detail-btn:hover {
+            background: #38a169;
+            transform: translateY(-1px);
+        }
+
+        .btn-voucher-verify {
+            background: #553c9a;
+            color: white;
+            border: none;
+            padding: 4px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .btn-voucher-verify:hover:not(:disabled) {
+            background: #44337a;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 6px rgba(85,60,154,0.35);
+        }
+        .btn-voucher-verify.btn-completed {
+            background: #276749;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        /* ── Modals ── */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.75);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.2s;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .modal.show { display: flex; }
+
+        .modal-content {
+            background: white;
+            padding: 0;
+            border-radius: 16px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 85vh;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: slideUp 0.3s;
+        }
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-content h3 {
+            margin: 0;
+            padding: 25px 30px;
+            font-size: 24px;
+            border-bottom: 2px solid #e2e8f0;
+            background: linear-gradient(135deg, #38a169 0%, #276749 100%);
+            color: white;
+        }
+
+        .modal-loading, .modal-error { padding: 40px; text-align: center; color: #667eea; font-weight: 600; }
+        .modal-error { color: #e53e3e; }
+
+        .detail-section {
+            padding: 25px 30px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .detail-section:last-child { border-bottom: none; }
+        .detail-section h5 { color: #667eea; margin-bottom: 15px; font-size: 18px; font-weight: 700; }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        .detail-item { display: flex; flex-direction: column; gap: 5px; }
+        .detail-label { font-size: 12px; color: #718096; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .detail-value { font-size: 15px; color: #2d3748; font-weight: 500; }
+
+        .photo-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .photo-item {
+            background: #f8fafc; padding: 12px; border-radius: 12px;
+            border: 2px solid #e2e8f0; transition: all 0.3s;
+        }
+        .photo-item:hover { border-color: #667eea; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102,126,234,0.15); }
+        .voucher-preview { width: 100%; height: 200px; object-fit: cover; cursor: zoom-in; border: 1px solid #cbd5e0; border-radius: 8px; }
+        .photo-timestamp { margin: 8px 0 0 0; font-size: 11px; color: #718096; text-align: center; }
+        .no-photo-placeholder { text-align: center; padding: 30px; background: #f7fafc; border-radius: 12px; color: #a0aec0; font-style: italic; border: 1px solid #e2e8f0; }
+
+        .close-btn {
+            position: absolute; top: 20px; right: 20px;
+            background: rgba(255,255,255,0.3); color: white;
+            padding: 8px 14px; font-size: 14px;
+            border: 2px solid rgba(255,255,255,0.5);
+            border-radius: 6px; cursor: pointer; font-weight: 700;
+            transition: all 0.2s; z-index: 1;
+        }
+        .close-btn:hover { background: rgba(255,255,255,0.5); transform: scale(1.05); }
+
+        .dataTables_wrapper .dataTables_filter input {
+            border: 2px solid #e2e8f0; border-radius: 6px; padding: 8px 12px; margin-left: 8px;
+        }
+        .dataTables_wrapper .dataTables_length select {
+            border: 2px solid #e2e8f0; border-radius: 6px; padding: 6px 10px; margin: 0 8px;
+        }
+        table.dataTable thead th { background: #f7fafc; color: #2d3748; font-weight: 700; padding: 12px 8px; border-bottom: 2px solid #e2e8f0; }
+        table.dataTable tbody td { padding: 12px 8px; vertical-align: middle; }
+        table.dataTable tbody tr:hover { background: #f7fafc; }
+
+        .modal-body-scroll {
+            max-height: 70vh; overflow-y: auto; padding-bottom: 20px;
+        }
+        .modal-body-scroll::-webkit-scrollbar { width: 8px; }
+        .modal-body-scroll::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        .modal-body-scroll::-webkit-scrollbar-thumb { background: #667eea; border-radius: 10px; }
+
+        /* ── Voucher Modal Specific ── */
+        .voucher-modal-body { padding: 30px; }
+
+        .voucher-input-wrap {
+            position: relative;
+            margin: 20px 0 8px;
+        }
+        .voucher-input-wrap input {
+            width: 100%;
+            padding: 14px 16px;
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: 4px;
+            text-align: center;
+            text-transform: uppercase;
+            border: 3px solid #e2e8f0;
+            border-radius: 10px;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .voucher-input-wrap input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102,126,234,0.2);
+        }
+        .voucher-hint {
+            font-size: 12px;
+            color: #a0aec0;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .voucher-error {
+            color: #e53e3e;
+            background: #fff5f5;
+            border: 1px solid #fc8181;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+        .voucher-success {
+            color: #276749;
+            background: #c6f6d5;
+            border: 1px solid #68d391;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+        .voucher-submit-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #38a169 0%, #276749 100%);
+            color: white;
+            border: none;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: 700;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.15s;
+        }
+        .voucher-submit-btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+        .voucher-submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .voucher-cancel-btn {
+            width: 100%;
+            background: #f7fafc;
+            color: #718096;
+            border: 2px solid #e2e8f0;
+            padding: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: background 0.2s;
+        }
+        .voucher-cancel-btn:hover { background: #edf2f7; }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-8px); }
+            40% { transform: translateX(8px); }
+            60% { transform: translateX(-5px); }
+            80% { transform: translateX(5px); }
+        }
+        .input-shake { animation: shake 0.4s ease-in-out; border-color: #fc8181 !important; }
+    </style>
+</head>
+<body>
+    <!-- Remarks Modal -->
+    <div id="remarksModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <h3>Update Remarks</h3>
+            <div class="p-4">
+                <input type="hidden" id="remarks_id">
+                <textarea id="remarks_text" class="form-control" rows="4"></textarea>
+                <div class="mt-3 d-flex gap-2">
+                    <button class="view-detail-btn" onclick="saveRemarks()">Save Changes</button>
+                    <button class="logout-btn" onclick="closeSpecificModal('remarksModal')">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Amount Modal -->
+    <div id="amountModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <h3>Update Amount Released</h3>
+            <div class="p-4">
+                <input type="hidden" id="amount_id">
+                <label class="detail-label">New Amount (₱)</label>
+                <input type="number" id="amount_input" class="form-control" step="0.01">
+                <p id="suggested_text" class="text-muted mt-2 small"></p>
+                <div class="mt-3 d-flex gap-2">
+                    <button class="view-detail-btn" onclick="saveAmount()">Update Amount</button>
+                    <button class="logout-btn" onclick="closeSpecificModal('amountModal')">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ✅ Voucher Verify Modal -->
+    <div id="voucherModal" class="modal">
+        <div class="modal-content" style="max-width: 440px;">
+            <h3>🎟 Verify Voucher Code</h3>
+            <div class="voucher-modal-body">
+                <input type="hidden" id="voucher_cashier_id">
+
+                <p style="color:#4a5568; font-size:14px; margin-bottom:4px;">
+                    Enter the 7-character voucher code to mark this entry as <strong>completed</strong>.
+                </p>
+
+                <div class="voucher-input-wrap">
+                    <input 
+                        type="text" 
+                        id="voucher_code_input" 
+                        maxlength="7" 
+                        placeholder="XXXXXXX"
+                        autocomplete="off"
+                        spellcheck="false"
+                    >
+                </div>
+                <p class="voucher-hint">7 alphanumeric characters · case-insensitive</p>
+
+                <div id="voucher_error_msg" class="voucher-error hidden"></div>
+                <div id="voucher_success_msg" class="voucher-success hidden"></div>
+
+                <button id="voucher_submit_btn" class="voucher-submit-btn" onclick="verifyVoucher()">
+                    Verify Voucher
+                </button>
+                <button class="voucher-cancel-btn" onclick="closeSpecificModal('voucherModal')">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container" data-controller="cashier">
+        <div class="header">
+            <div class="header-top">
+                <h1>Cargo Accounting Dashboard</h1>
+                <span class="count-badge">Total Entries: <span data-cashier-target="count">0</span></span>
+            </div>
+            <div class="header-actions">
+                <button class="refresh-btn" data-action="click->cashier#refresh">🔄 Refresh Data</button>
+                <form action="{% url 'logout-cargo' %}" method="post" style="margin: 0;">
+                    {% csrf_token %}
+                    <button class="logout-btn" type="submit">Logout</button>
+                </form>
+            </div>
+        </div>
+
+        <div data-cashier-target="loading" class="loading">
+            Loading cashier data...
+        </div>
+
+        <div data-cashier-target="error" class="error hidden"></div>
+
+        <div class="table-wrapper">
+            <form class="d-flex align-items-end gap-3 mb-3" method="POST" action="{% url 'cashier' %}">
+                {% csrf_token %}
+                <div>
+                    {{ form.start_date.label_tag }}
+                    {{ form.start_date }}
+                </div>
+                <div>
+                    {{ form.end_date.label_tag }}
+                    {{ form.end_date }}
+                </div>
+                <button type="submit" class="btn btn-outline-success">Export</button>
+            </form>
+            <table data-cashier-target="table" class="display responsive nowrap" style="width:100%"></table>
+        </div>
+
+        <!-- Detail Modal -->
+        <div data-cashier-target="modal" class="modal" data-action="click->cashier#closeModal">
+            <div class="modal-content">
+                <button class="close-btn" data-action="click->cashier#closeModal">✕ Close</button>
+                <h3>Entry Details</h3>
+                <div data-cashier-target="detailContent"></div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

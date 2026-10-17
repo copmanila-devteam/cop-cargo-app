@@ -675,8 +675,6 @@ class CashierView(LoginRequiredMixin, View):
 
             # return render(request, 'error_pages/404_page.html', status=404)
 
-    
-
         return super().dispatch(request, *args, **kwargs)
 
 
@@ -1020,6 +1018,369 @@ class CashierView(LoginRequiredMixin, View):
 
             return JsonResponse({'status': 'error', 'message': 'Not found'}, status=404)     
 
+
+
+
+
+class AccountingView(LoginRequiredMixin, View):
+    login_url = 'login-cargo'    
+
+    def dispatch(self, request, *args, **kwargs):
+
+        user = self.request.user
+        if user.is_authenticated:
+            # Note: Assuming Usertype is a mapping defined elsewhere in your code
+            if user.type not in ['ACNT']:
+                return redirect(Usertype[user.type])
+
+        else:
+            # If the user is not authenticated, you might want to redirect them to the login page or show a 404 page. Adjust this as needed.
+            redirect_url = reverse('login-cargo')  # Assuming 'login-cargo' is the name of your login URL
+
+            # return render(request, 'error_pages/404_page.html', status=404)
+
+        return super().dispatch(request, *args, **kwargs)
+
+
+
+    def get(self, request, id=None, *args, **kwargs):
+
+        if id:
+
+            return self.get_cashier_detail(request, id)
+
+        
+
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+
+            return self.get_cashier_list(request)
+
+        
+
+        form = ReportDateRangeFilterForm()
+
+        return render(request, 'Accountant/index.html', {'form': form})
+
+
+
+
+
+    def post(self, request, id=None, *args, **kwargs):
+
+        form = ReportDateRangeFilterForm(request.POST)
+
+
+
+        if form.is_valid():
+
+           
+
+            start_date = form.cleaned_data.get('start_date')
+
+            end_date = form.cleaned_data.get('end_date')
+
+            user = self.request.user
+
+
+
+            start_date_format = start_date.strftime('%B %d, %Y')
+
+            end_date_format = end_date.strftime('%B %d, %Y')
+
+            response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+          
+
+            response['Content-Disposition'] = f'attachment; filename="Cashier Report {start_date_format} - {end_date_format}.xlsx"'
+
+           
+
+
+
+            cashier_data = Cashier.objects.filter(Q(date__gte=start_date) & Q(date__lte=end_date),approved_by__isnull=False).order_by('-time_arrived') if user.campus.name == 'Campus Main' else Cashier.objects.filter(Q(date__gte=start_date) & Q(date__lte=end_date), approved_by__isnull=False ,campus=user.campus).order_by('-time_arrived')
+
+
+
+            wb = openpyxl.Workbook()
+
+            ws = wb.active
+
+            ws.title = 'Cashier'
+
+
+
+            headers = ['Leader Name', 'Origin','Campus', 'Service Schedule', 'Date & Time Arrived', 'Vehicle Type','Number of Members','Subsidy Amount','Amount Released','Remarks']
+
+            ws.append(headers)
+
+
+
+            for row_num, cashier in enumerate(cashier_data, start=2):
+
+                num_members = CargoDetails.objects.filter(cashier=cashier).count()
+
+                time_arrived = cashier.time_arrived.astimezone()
+
+                ws.append(
+
+                    [
+
+                        f'{cashier.leader.first_name} {cashier.leader.last_name}',
+
+                        cashier.start_location.name,
+
+                        cashier.campus.name,
+
+                        str(cashier.service_schedule),
+
+                        time_arrived.strftime('%B %d, %Y %I:%M %p'),
+
+                        cashier.vehicle.name,
+
+                        num_members,
+
+                        cashier.subsidy_amount,
+
+                        cashier.amount_released,
+
+                        cashier.remarks,
+
+                    ])
+
+                ws.cell(row=row_num, column=8).number_format = '0.00'
+
+                ws.cell(row=row_num, column=9).number_format = '0.00'
+
+                
+
+            tab = Table(displayName="ProjectTable", ref=f"A1:{openpyxl.utils.get_column_letter(ws.max_column)}{ws.max_row}")
+
+            style = TableStyleInfo(name="TableStyleMedium9", showFirstColumn=False,
+
+                           showLastColumn=False, showRowStripes=True, showColumnStripes=False)
+
+            
+
+            tab.tableStyleInfo = style
+
+            ws.add_table(tab)
+
+            wb.save(response)
+
+            return response
+
+
+
+
+
+    def get_cashier_list(self, request):
+        try:
+            user = self.request.user
+            from django.db.models import Count
+
+            base_qs = (
+                Cashier.objects
+                .select_related(
+                    'leader', 'campus', 'subsidy_type', 'vehicle',
+                    'start_location', 'approved_by', 'service_schedule'
+                )
+                .prefetch_related('images')  # leader removed from here
+                .annotate(image_count=Count('images'))
+                .filter(approved_by__isnull=False)
+                .order_by('-time_arrived')
+            )
+
+            if user.campus.name != "Main Campus":
+                base_qs = base_qs.filter(campus=user.campus)
+
+            # Evaluate queryset once
+            cashiers = list(base_qs)
+
+            # Bulk fetch vouchers — no more N+1
+            cashier_ids = [c.id for c in cashiers]
+            voucher_map = {
+                v.cashier_id: v.voucher_code
+                for v in Voucher.objects.filter(cashier_id__in=cashier_ids)
+            }
+
+            data = []
+            for i, cashier in enumerate(cashiers, start=1):
+                is_late = False
+                if cashier.time_arrived and cashier.service_schedule:
+                    sched_dt = datetime.combine(cashier.date, cashier.service_schedule.time)
+                    threshold_time = sched_dt + timedelta(minutes=15)
+                    arrival = cashier.time_arrived
+                    if timezone.is_aware(arrival):
+                        arrival = timezone.make_naive(arrival)
+                    is_late = arrival > threshold_time
+
+                data_date_time_arrived = cashier.time_arrived.astimezone()
+                data.append({
+                    'id': cashier.id,
+                    'row_num': i,
+                    'leader': {
+                        'id': cashier.leader.id,
+                        'first_name': cashier.leader.first_name,
+                        'last_name': cashier.leader.last_name,
+                    } if cashier.leader else None,
+                    'date': cashier.date.isoformat() if cashier.date else None,
+                    'campus': {
+                        'id': cashier.campus.id,
+                        'name': cashier.campus.name
+                    } if cashier.campus else None,
+                    'vehicle': {
+                        'id': cashier.vehicle.id,
+                        'name': cashier.vehicle.name,
+                        'price': float(cashier.vehicle.peso_price)
+                    } if cashier.vehicle else None,
+                    'subsidy_amount': float(cashier.subsidy_amount),
+                    'date_time_arrived': data_date_time_arrived.strftime('%B %d, %Y %I:%M:%S %p'),
+                    'amount_released': float(cashier.amount_released),
+                    'voucher': voucher_map.get(cashier.id, 'N/A'),
+                    'is_late': is_late,
+                    'remarks': cashier.remarks,
+                    'image_count': cashier.image_count,  # from annotation
+                    'completed': cashier.completed,
+                })
+            return JsonResponse({'status': 'success', 'count': len(data), 'data': data})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+ 
+   
+                    
+
+                  
+
+    
+
+    def get_cashier_detail(self, request, id):
+
+        """Unchanged detailed view logic..."""
+
+        # (This remains largely as you provided but ensures consistency with calculations)
+
+        try:
+
+            cashier = Cashier.objects.select_related(
+
+                'leader', 'start_location','campus', 'subsidy_type', 'vehicle', 
+
+                'start_location', 'approved_by', 'service_schedule'
+
+            ).prefetch_related('leader', 'images').get(id=id)
+
+
+
+
+
+            cargo_items = CargoDetails.objects.filter(cashier=cashier, cargo__leader=cashier.leader)
+
+            try:
+
+                voucher = Voucher.objects.get(cashier=cashier)
+
+                voucher = voucher.voucher_code
+
+            except Exception as e:
+
+                voucher = 'N/A'
+
+
+
+            is_late = False
+
+            if cashier.time_arrived and cashier.service_schedule:
+
+                sched_dt = datetime.combine(cashier.date, cashier.service_schedule.time)
+
+                threshold = sched_dt - timedelta(minutes=15)
+
+                arrival = timezone.make_naive(cashier.time_arrived) if timezone.is_aware(cashier.time_arrived) else cashier.time_arrived
+
+                if arrival > threshold:
+
+                    is_late = True
+
+
+
+            service_schedule_data = None
+
+            if cashier.service_schedule:
+
+                service_schedule_data = {
+
+                    'id': cashier.service_schedule.id,
+
+                    'day': cashier.service_schedule.get_days_display(),
+
+                    'time': cashier.service_schedule.time.strftime('%H:%M:%S'),
+
+                    'campus': {'name': cashier.service_schedule.campus.name} if cashier.service_schedule.campus else None
+
+                }
+
+
+
+            detail_data = {
+
+                'id': cashier.id,
+
+                'leader': {'first_name': cashier.leader.first_name, 'last_name': cashier.leader.last_name} if cashier.leader else None,
+
+                'date': cashier.date.isoformat() if cashier.date else None,
+
+                'start_location': {'name': cashier.start_location.name} if cashier.start_location else None,
+
+                'campus': {'name': cashier.campus.name} if cashier.campus else None,
+
+                'vehicle': {'name': cashier.vehicle.name} if cashier.vehicle else None,
+
+                'subsidy_type': {'name': cashier.subsidy_type.name} if cashier.subsidy_type else None,
+
+                'service_schedule': service_schedule_data,
+
+                'plate_num': cashier.plate_num,
+
+                'subsidy_amount': float(cashier.subsidy_amount),
+
+                'amount_released': float(cashier.amount_released),
+
+                'is_late': is_late,
+
+                'rejected': cashier.rejected,
+
+                'voucher': voucher,
+
+                'remarks': cashier.remarks,
+
+                'time_arrived': cashier.time_arrived.isoformat() if cashier.time_arrived else None,
+
+                'images': [{'url': request.build_absolute_uri(img.image.url), 'uploaded_at': img.uploaded_at.isoformat()} for img in cashier.images.all()],
+
+                'users': [
+
+                    {
+
+                        'first_name': u.cargo.attendee.first_name, 
+
+                        'middle_name': u.cargo.attendee.middle_name,
+
+                        'last_name': u.cargo.attendee.last_name,
+
+                        'cop_id':'N/A' if u.cargo.attendee.cop_id is None else u.cargo.attendee.cop_id,
+
+                    } for u in cargo_items
+
+                ],
+
+            }
+
+            return JsonResponse({'status': 'success', 'data': detail_data})
+
+        except Cashier.DoesNotExist:
+
+            return JsonResponse({'status': 'error', 'message': 'Not found'}, status=404)     
 
 
 @login_required

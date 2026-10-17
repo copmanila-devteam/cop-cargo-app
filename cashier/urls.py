@@ -2,7 +2,7 @@ from django.urls import path
 
 from django.contrib.auth.views import LogoutView
 
-from .views import CashierView, AttendeeView, VoucherView, BookingHistoryView, ReportsView
+from .views import CashierView, AttendeeView, VoucherView, BookingHistoryView, ReportsView, AccountingView
 
 from Account.views import LoginCargoView, RegistrationView
 
@@ -11,9 +11,6 @@ from . import views
 
 
 urlpatterns = [
-
-    
-
     path('login/',LoginCargoView.as_view(),name='login-cargo'),
 
     path('logout', LogoutView.as_view(), name='logout-cargo'),
@@ -21,6 +18,10 @@ urlpatterns = [
     path('register/',RegistrationView.as_view(), name='register'),
 
     path('', CashierView.as_view(), name='cashier'),
+
+    path('accounting/', AccountingView.as_view(), name='accounting'),
+
+    path('accounting/<int:id>/details/', AccountingView.as_view(), name='accounting-detail'),
 
     path('fetch_vouchers/', CashierView.as_view(), name='cashier-list'),
 

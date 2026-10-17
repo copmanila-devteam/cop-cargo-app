@@ -74,7 +74,7 @@ class MatrixAdmin(admin.ModelAdmin):
 
     list_display = ['campus','city','vehicle', 'peso_price']
 
-    search_fields = ['campus', 'vehicle']
+    search_fields = ['campus__name', 'city__name', 'vehicle__name']
 
 
 

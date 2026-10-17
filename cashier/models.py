@@ -6,6 +6,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 
 from django.core.validators import RegexValidator
 from django.utils import timezone
+import uuid
 
 class Event(models.Model):
     name = models.CharField(max_length=200)
@@ -140,14 +141,13 @@ class Attendees(models.Model):
 
 
 class City(models.Model):
-
     name = models.CharField(max_length=300)
 
-
-
     def __str__(self):
-
         return f"{self.name}"
+
+    class Meta:
+        verbose_name_plural = 'Cities'
 
 
 
@@ -164,9 +164,6 @@ class SubsidyType(models.Model):
     def __str__(self):
 
         return self.name
-
-
-
 
 
 class ServiceSchedule(models.Model):
@@ -188,7 +185,6 @@ class ServiceSchedule(models.Model):
         ('SUN', 'Sunday'),
 
     ]
-
 
 
     campus = models.ForeignKey(Campus, on_delete=models.CASCADE, null=True, blank=True, related_name='service_entries')
@@ -260,14 +256,9 @@ class Cashier(models.Model):
 
 
     completed = models.BooleanField(default=False)
-    
-
     rejected = models.BooleanField(default=False)
-
     service_schedule = models.ForeignKey(ServiceSchedule, on_delete=models.CASCADE, null=True, blank=True, related_name='service_schedule')
-
     time_arrived = models.DateTimeField(default=timezone.now, null=True)
-
     remarks = models.CharField(max_length=300, blank=True)
     event = models.ForeignKey(Event, on_delete=models.SET_NULL, null=True, related_name='event')
 
@@ -275,20 +266,19 @@ class Cashier(models.Model):
         db_table = 'cashier'
         ordering = ['-date']
         indexes = [
-       
             models.Index(fields=['campus', '-time_arrived'], name='idx_cash_campus_time'),
             models.Index(fields=['approved_by'], name='idx_cash_approved'),
             models.Index(fields=['-time_arrived'], name='idx_cash_time'),
             models.Index(fields=['campus', 'approved_by', '-time_arrived'], name='idx_cash_camp_appr_time'),
         ]
 
-
-
     def __str__(self):
 
         # Updated to use the leader relationship since first_name/last_name fields are gone
 
         return f"{self.leader.first_name} {self.leader.last_name} - {self.date}"
+
+
 
 
 class Voucher(models.Model):
@@ -309,22 +299,12 @@ class Voucher(models.Model):
 
 
 class CargoDetails(models.Model):
-
     cashier = models.ForeignKey(Cashier, on_delete=models.CASCADE, related_name='cargo_cashier')
-
     cargo = models.ForeignKey(LeadersAttendees, on_delete=models.CASCADE, related_name='cargo_leaders_attendees')
 
-      
-
     class Meta:
-
         db_table = 'cargo_details'
-
-
-
-
-
-
+        verbose_name_plural = 'Cargo Details'
 
 class CashierImage(models.Model):
 
@@ -354,16 +334,10 @@ class CashierImage(models.Model):
 
 
 class Matrix(models.Model):
-
     city = models.ForeignKey(City, on_delete=models.CASCADE, null=True, blank=True, related_name='matrix_campus')
-
     campus = models.ForeignKey(Campus, on_delete=models.CASCADE, null=True, blank=True, related_name='matrix_campus')
-
     vehicle = models.ForeignKey(Vehicle, on_delete=models.CASCADE, null=True)
-
     peso_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
-
-
 
     def __str__(self):
 
@@ -372,18 +346,27 @@ class Matrix(models.Model):
     
 
     class Meta:
-
         db_table = 'Matrix'
-
         verbose_name ='Matrix'
-
         verbose_name_plural = 'Matrix Fare'
 
 
 
+class RemarksList(models.Model):
+    description = models.CharField(max_length=300, blank=True)
+    user = models.ForeignKey(UserType, on_delete=models.CASCADE, null=True, blank=True, related_name='remarks_user')
+    cashier = models.ForeignKey(Cashier, on_delete=models.CASCADE, null=True, blank=True, related_name='remarks_cashier')
+    uuid = models.UUIDField(unique=True, primary_key=True, default=uuid.uuid4, editable=False)
+    timestamp = models.DateTimeField(auto_now_add=True)
 
-
+    def __str__(self):
+        return f'{self.user} {self.description}'
     
+    class Meta:
+            db_table = 'remarks_list'
+            verbose_name ='Remarks List'
+            verbose_name_plural = 'Remarks Lists'
+
 
 class CashierUsers(models.Model):
 

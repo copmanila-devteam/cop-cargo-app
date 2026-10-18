@@ -13,12 +13,14 @@ class RemarksListAdmin(admin.ModelAdmin):
     list_display = ['description', 'user', 'cashier', 'timestamp']
     search_fields = ['description', 'user__first_name', 'user__last_name', 'cashier__leader__first_name', 'cashier__leader__last_name']
 
+# @admin.register(CampusEvent)
+# class CampusEventAdmin(admin.ModelAdmin):
+#    list_display = ['campus__name', 'event__name']
+#    search_fields = ['campus__name', 'event__name']
+
 @admin.register(Vehicle)
-
 class VehicleAdmin(admin.ModelAdmin):
-
     list_display = ['name', 'peso_price']
-
     search_fields = ['name']
 
 

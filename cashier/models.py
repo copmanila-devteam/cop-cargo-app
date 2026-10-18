@@ -8,18 +8,7 @@ from django.core.validators import RegexValidator
 from django.utils import timezone
 import uuid
 
-class Event(models.Model):
-    name = models.CharField(max_length=200)
-    description = models.CharField(max_length=200)
-    start_date = models.DateField()
-    end_date = models.DateField()
-    priority = models.PositiveIntegerField(
-        default=0,
-        help_text="Higher number = higher priority"
-    ) # This field will designate the level of priority in the selection of Events, if any same day events occur
 
-    def __str__(self):
-        return self.name
 
 
 class Vehicle(models.Model):
@@ -74,10 +63,28 @@ class Campus(models.Model):
 
 
 
+class Event(models.Model):
+    name = models.CharField(max_length=200)
+    description = models.CharField(max_length=200)
+    start_date = models.DateField()
+    end_date = models.DateField()
+    campus = models.ForeignKey(Campus, null=True, on_delete=models.SET_NULL, related_name='campus')
+    priority = models.PositiveIntegerField(
+        default=0,
+        help_text="Higher number = higher priority"
+    ) # This field will designate the level of priority in the selection of Events, if any same day events occur
 
+    def __str__(self):
+        return f'{self.name}'
 
+# class CampusEvent(models.Model):
+#   campus =  models.ForeignKey(Campus, on_delete=models.SET_NULL, null=True, blank=True, related_name='campus')
+#   event = models.ForeignKey(Campus, on_delete=models.SET_NULL, null=True, blank=True, related_name='event')
+#   uuid = models.UUIDField(unique=True, primary_key=True, default=uuid.uuid4, editable=False)
 
-
+#   def __str__(self):
+#           return f'{self.campus__name} - {self.event__name}'
+   
 class Attendees(models.Model):
 
     """User model for passengers and leaders"""

@@ -1,0 +1,352 @@
+<style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #38a169 0%, #276749 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            width: 100%;
+        }
+        
+        .header-actions form {
+            margin-left: auto !important;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 28px;
+        }
+
+        .count-badge {
+            background: #38a169;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .refresh-btn, .logout-btn {
+            background: #38a169;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        .logout-btn {
+            background: #e53e3e;
+        }
+
+        .refresh-btn:hover { background: #5568d3; }
+        .logout-btn:hover { background: #c53030; }
+
+        .loading, .error {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .loading { color: #667eea; font-weight: 600; }
+        .error { color: #e53e3e; background: #fff5f5; border: 1px solid #fc8181; }
+
+        .hidden { display: none; }
+
+        .table-wrapper {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        table.dataTable { width: 100% !important; }
+
+        /* ── Completed badges ── */
+        .completed-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            font-size: 15px;
+            font-weight: 800;
+            cursor: default;
+        }
+        .completed-yes {
+            background: #c6f6d5;
+            color: #276749;
+            border: 2px solid #68d391;
+        }
+        .completed-no {
+            background: #fed7d7;
+            color: #9b2335;
+            border: 2px solid #fc8181;
+        }
+
+        /* ── Action Buttons ── */
+        .view-detail-btn {
+            background: #48bb78;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .view-detail-btn:hover {
+            background: #38a169;
+            transform: translateY(-1px);
+        }
+
+        .btn-voucher-verify {
+            background: #553c9a;
+            color: white;
+            border: none;
+            padding: 4px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .btn-voucher-verify:hover:not(:disabled) {
+            background: #44337a;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 6px rgba(85,60,154,0.35);
+        }
+        .btn-voucher-verify.btn-completed {
+            background: #276749;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        /* ── Modals ── */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.75);
+            z-index: 10000;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.2s;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .modal.show { display: flex; }
+
+        .modal-content {
+            background: white;
+            padding: 0;
+            border-radius: 16px;
+            max-width: 800px;
+            width: 90%;
+            max-height: 85vh;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: slideUp 0.3s;
+        }
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-content h3 {
+            margin: 0;
+            padding: 25px 30px;
+            font-size: 24px;
+            border-bottom: 2px solid #e2e8f0;
+            background: linear-gradient(135deg, #38a169 0%, #276749 100%);
+            color: white;
+        }
+
+        .modal-loading, .modal-error { padding: 40px; text-align: center; color: #667eea; font-weight: 600; }
+        .modal-error { color: #e53e3e; }
+
+        .detail-section {
+            padding: 25px 30px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .detail-section:last-child { border-bottom: none; }
+        .detail-section h5 { color: #667eea; margin-bottom: 15px; font-size: 18px; font-weight: 700; }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        .detail-item { display: flex; flex-direction: column; gap: 5px; }
+        .detail-label { font-size: 12px; color: #718096; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .detail-value { font-size: 15px; color: #2d3748; font-weight: 500; }
+
+        .photo-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .photo-item {
+            background: #f8fafc; padding: 12px; border-radius: 12px;
+            border: 2px solid #e2e8f0; transition: all 0.3s;
+        }
+        .photo-item:hover { border-color: #667eea; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(102,126,234,0.15); }
+        .voucher-preview { width: 100%; height: 200px; object-fit: cover; cursor: zoom-in; border: 1px solid #cbd5e0; border-radius: 8px; }
+        .photo-timestamp { margin: 8px 0 0 0; font-size: 11px; color: #718096; text-align: center; }
+        .no-photo-placeholder { text-align: center; padding: 30px; background: #f7fafc; border-radius: 12px; color: #a0aec0; font-style: italic; border: 1px solid #e2e8f0; }
+
+        .close-btn {
+            position: absolute; top: 20px; right: 20px;
+            background: rgba(255,255,255,0.3); color: white;
+            padding: 8px 14px; font-size: 14px;
+            border: 2px solid rgba(255,255,255,0.5);
+            border-radius: 6px; cursor: pointer; font-weight: 700;
+            transition: all 0.2s; z-index: 1;
+        }
+        .close-btn:hover { background: rgba(255,255,255,0.5); transform: scale(1.05); }
+
+        .dataTables_wrapper .dataTables_filter input {
+            border: 2px solid #e2e8f0; border-radius: 6px; padding: 8px 12px; margin-left: 8px;
+        }
+        .dataTables_wrapper .dataTables_length select {
+            border: 2px solid #e2e8f0; border-radius: 6px; padding: 6px 10px; margin: 0 8px;
+        }
+        table.dataTable thead th { background: #f7fafc; color: #2d3748; font-weight: 700; padding: 12px 8px; border-bottom: 2px solid #e2e8f0; }
+        table.dataTable tbody td { padding: 12px 8px; vertical-align: middle; }
+        table.dataTable tbody tr:hover { background: #f7fafc; }
+
+        .modal-body-scroll {
+            max-height: 70vh; overflow-y: auto; padding-bottom: 20px;
+        }
+        .modal-body-scroll::-webkit-scrollbar { width: 8px; }
+        .modal-body-scroll::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        .modal-body-scroll::-webkit-scrollbar-thumb { background: #667eea; border-radius: 10px; }
+
+        /* ── Voucher Modal Specific ── */
+        .voucher-modal-body { padding: 30px; }
+
+        .voucher-input-wrap {
+            position: relative;
+            margin: 20px 0 8px;
+        }
+        .voucher-input-wrap input {
+            width: 100%;
+            padding: 14px 16px;
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: 4px;
+            text-align: center;
+            text-transform: uppercase;
+            border: 3px solid #e2e8f0;
+            border-radius: 10px;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .voucher-input-wrap input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102,126,234,0.2);
+        }
+        .voucher-hint {
+            font-size: 12px;
+            color: #a0aec0;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .voucher-error {
+            color: #e53e3e;
+            background: #fff5f5;
+            border: 1px solid #fc8181;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+        .voucher-success {
+            color: #276749;
+            background: #c6f6d5;
+            border: 1px solid #68d391;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+        .voucher-submit-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #38a169 0%, #276749 100%);
+            color: white;
+            border: none;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: 700;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.15s;
+        }
+        .voucher-submit-btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); }
+        .voucher-submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .voucher-cancel-btn {
+            width: 100%;
+            background: #f7fafc;
+            color: #718096;
+            border: 2px solid #e2e8f0;
+            padding: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 8px;
+            transition: background 0.2s;
+        }
+        .voucher-cancel-btn:hover { background: #edf2f7; }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-8px); }
+            40% { transform: translateX(8px); }
+            60% { transform: translateX(-5px); }
+            80% { transform: translateX(5px); }
+        }
+        .input-shake { animation: shake 0.4s ease-in-out; border-color: #fc8181 !important; }
+    </style>

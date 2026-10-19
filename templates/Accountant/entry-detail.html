@@ -1,0 +1,107 @@
+<div class="modal-body-scroll">
+    <div class="detail-section"
+         :style="{ background: statusBg, borderLeft: '5px solid ' + statusColor }">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 :style="{ color: statusColor, margin: 0 }">Payment Summary</h5>
+            <q-badge :color="statusColor">[[ statusText ]]</q-badge>
+        </div>
+        <div class="detail-grid">
+            <div class="detail-item">
+                <span class="detail-label">Subsidy Amount</span>
+                <span class="detail-value" :style="bigValueStyle">
+                    ₱ [[ Number(selectedRow.subsidy_amount ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 }) ]]
+                </span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Amount Released</span>
+                <span class="detail-value" :style="bigValueStyle">
+                    ₱ [[ Number(selectedRow.amount_released ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 }) ]]
+                </span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Voucher Code</span>
+                <span class="detail-value" :style="bigValueStyle">[[ selectedRow.voucher ]]</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="detail-section">
+        <h5>Trip Information</h5>
+        <div class="detail-grid">
+            <div class="detail-item">
+                <span class="detail-label">Leader</span>
+                <span class="detail-value">
+                    [[ selectedRow.leader ? selectedRow.leader.first_name + ' ' + selectedRow.leader.last_name : 'N/A' ]]
+                </span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Date</span>
+                <span class="detail-value">[[ formatDate(selectedRow.date) ]]</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Origin</span>
+                <span class="detail-value">[[ selectedRow.start_location?.name ]]</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Destination</span>
+                <span class="detail-value">[[ selectedRow.campus?.name ]]</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Subsidy Type</span>
+                <span class="detail-value">[[ selectedRow.subsidy_type?.name ]]</span>
+            </div>
+            <div class="detail-item" style="grid-column: span 2;">
+                <span class="detail-label">Service Schedule</span>
+                <span class="detail-value" style="color: #667eea; font-weight: 700;">[[ formattedSchedule ]]</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Vehicle</span>
+                <span class="detail-value">[[ selectedRow.vehicle ? selectedRow.vehicle.name : 'N/A' ]]</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Plate Number</span>
+                <span class="detail-value">[[ selectedRow.plate_num || 'N/A' ]]</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Remarks</span>
+                <span class="detail-value">[[ selectedRow.remarks || 'N/A' ]]</span>
+            </div>
+            <div class="detail-item" v-if="selectedRow.time_arrived">
+                <span class="detail-label">Actual Arrival</span>
+                <span class="detail-value">[[ formatDateTime(selectedRow.time_arrived) ]]</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="detail-section">
+        <h5>Passengers ([[ selectedRow.users ? selectedRow.users.length : 0 ]])</h5>
+        <div class="passengers-list">
+            <div class="passenger-grid" v-if="selectedRow.users && selectedRow.users.length > 0">
+                <div class="passenger-card" v-for="u in selectedRow.users" :key="u.cop_id">
+                    <div class="passenger-info">
+                        <div class="passenger-name">
+                            COPID: [[ u.cop_id ]] - Name: [[ u.first_name ]] [[ u.middle_name ]] [[ u.last_name ]]
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="no-passengers" v-else>No passengers recorded</div>
+        </div>
+    </div>
+
+    <div class="detail-section text-center">
+        <h5>Photos ([[ hasImages ? selectedRow.images.length : 0 ]])</h5>
+        <div v-if="hasImages">
+            <div class="photo-item" v-for="(img, idx) in selectedRow.images" :key="idx">
+                <q-img :src="img.url" class="img-fluid rounded voucher-preview"
+                     @click="openImage(img.url)">
+                    <div class="absolute-bottom text-subtitle1 text-center">
+          [[ formatDateTime(img.uploaded_at) ]]
+        </div>
+                    </q-img>
+                
+            </div>
+        </div>
+        <div class="no-photo-placeholder" v-else>No photos uploaded</div>
+    </div>
+</div>

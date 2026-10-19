@@ -1,55 +1,70 @@
-<!doctype html>
-<html>
-<!--
-    WARNING! Make sure that you match all Quasar related
-    tags to the same version! (Below it's "@2.34.0")
-  -->
+{% extends 'Accountant/base.html '%}
+{% block title %}Accountant Dashboard{% endblock %}
 
-<head>
-    <title>Accounting Dashboard</title>
-    <link
-        href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900|Material+Icons|Material+Icons+Outlined|Material+Icons+Round|Material+Icons+Sharp"
-        rel="stylesheet" type="text/css">
-    <link href="https://cdn.jsdelivr.net/npm/ionicons@^4.0.0/dist/css/ionicons.min.css" rel="stylesheet"
-        type="text/css">
-    <link href="https://cdn.jsdelivr.net/npm/eva-icons@^1.0.0/style/eva-icons.css" rel="stylesheet" type="text/css">
-    <link href="https://maxst.icons8.com/vue-static/landings/line-awesome/line-awesome/1.3.0/css/line-awesome.min.css"
-        rel="stylesheet" type="text/css">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@^1.0.0/font/bootstrap-icons.css" rel="stylesheet"
-        type="text/css">
-    <link href="https://cdn.jsdelivr.net/npm/animate.css@^4.0.0/animate.min.css" rel="stylesheet" type="text/css">
-    <link href="https://cdn.jsdelivr.net/npm/quasar@2.34.0/dist/quasar.prod.css" rel="stylesheet" type="text/css">
-</head>
-
-<body>
+{% load static %}
+{% block content %}
     <!-- example of injection point where you write your app template -->
     <div id="q-app">
         <q-layout view="hHh lpR fFf">
             <q-header reveal bordered class="bg-white text-green q-pa-md" height-hint="98">
                 <q-toolbar>
                     <q-img bordered width="96px" height="auto" alt="Quasar logo"
-                        src="https://cop-cargo.com/static/img/cargo_logo.png"></q-img> |
+                        src="{% static 'img/cargo_logo.png'%}"></q-img> |
                     <q-toolbar-title>
                         Accounting
                     </q-toolbar-title>
 
                     <form action="{% url 'logout-cargo' %}" method="post" class="q-ml-sm" style="margin: 0;">
                         {% csrf_token %}
-                        <q-btn flat dense no-caps icon="logout" label="Logout" type="submit"></q-btn>
+                        <q-btn color="negative" no-caps icon="logout" label="Logout" type="submit"></q-btn>
                     </form>
                 </q-toolbar>
 
-                <q-btn push color="secondary" class="q-ma-md" label="Refresh Data" @click="fetchCashierData"></q-btn>
+                <q-btn push color="green" class="q-ma-md" label="Refresh Data" @click="fetchCashierData"></q-btn>
 
 
             </q-header>
-
             <q-page-container>
-                {% verbatim %}
                 <q-page padding>
-                    <div class="text-h6 q-mb-md">Vouchers: <span v-text="count"></span></div>
 
-                    <q-table :rows="rows" :columns="columns" row-key="row_num" :loading="loading" flat bordered>
+                    <q-card bordered class="my-card q-mb-md">
+                        <q-card-section>
+                            <div class="text-h6 ">Vouchers: <span v-text="count"></span></div>
+                        </q-card-section>
+
+                        <q-card-section>
+                            <form method="POST" action="{% url 'accounting' %}"
+                                class="row items-end q-col-gutter-md q-mb-md">
+                                {% csrf_token %}
+
+                                <div class="col-12 col-sm-auto">
+                                    <q-input v-model="startDate" name="start_date" type="date" label="Start date"
+                                        stack-label outlined dense></q-input>
+                                </div>
+
+                                <div class="col-12 col-sm-auto">
+                                    <q-input v-model="endDate" name="end_date" type="date" label="End date" stack-label
+                                        outlined dense :min="startDate"></q-input>
+                                </div>
+
+                                <div class="col-12 col-sm-auto">
+                                    <q-btn type="submit" color="positive" icon="download" label="Export" unelevated
+                                        no-caps></q-btn>
+                                </div>
+                            </form>
+
+                        </q-card-section>
+
+
+                        <q-separator dark inset />
+                    </q-card>
+
+
+
+                    <q-table :rows="rows" :columns="columns" row-key="row_num" :loading="loading" flat bordered
+                        v-model:pagination="pagination" :filter="filter" :rows-per-page-options="[10, 25, 50, 100]"
+                        rows-per-page-label="Show entries:" :pagination-label="paginationLabel"
+                        no-data-label="No data available in table" no-results-label="No matching records found">
                         <template v-slot:body-cell-completed="props">
                             <!-- For transforming the Completed Status to an icon-->
                             <q-td :props="props">
@@ -59,32 +74,82 @@
 
                         </template>
 
+                        <!-- Search bar -->
+                        <template #top-right>
+                            <q-input borderless dense debounce="300" v-model="filter" placeholder="Search">
+                                <template #append>
+                                    <q-icon name="search" />
+                                </template>
+                            </q-input>
+                        </template>
+
                         <!-- Actions column: buttons -->
                         <template v-slot:body-cell-actions="props">
                             <q-td :props="props">
-                                <div class="row no-wrap justify-center q-gutter-xs">
+                                <div class="q-pa-md row q-gutter-md items-start">
 
-                                    <q-btn dense unelevated color="primary" icon="visibility" label="View"
+                                    <q-btn unelevated color="primary" icon="visibility" label="View"
                                         @click="viewDetail(props.row)"></q-btn>
 
-                                    <q-btn dense outline color="info" icon="comment" label="Remarks"
+                                    <q-btn outline color="info" icon="comment" label="Remarks"
                                         @click="openRemarksModal(props.row)"></q-btn>
 
-                                    <q-btn v-if="!props.row.completed" dense unelevated color="positive"
-                                        icon="confirmation_number" label="Verify" @click="openVoucherModal(props.row)">
-                                        <q-tooltip>Verify Voucher</q-tooltip>
-                                    </q-btn>
-
                                 </div>
-                            </q-td>
-                        </template>
-                    </q-table>
-                </q-page>
-            </q-page-container>
 
-        </q-layout>
+                                <!-- For modals-->
+
+                                <!-- View detail modal -->
+                                <q-dialog v-model="showDetail">
+                                    <q-card style="min-width: 50%">
+                                        <q-card-section class="bg-green row items-center q-pb-md">
+                                            <div class="text-h6">Entry Details</div>
+                                            <q-space></q-space>
+                                            <q-btn icon="close" flat round dense v-close-popup></q-btn>
+                                        </q-card-section>
+
+                                        <q-card-section>
+                                            <!-- show whatever fields your row has -->
+
+                                            {% include 'Accountant/entry-detail.html' %}
+
+                                        </q-card-section>
+                                    </q-card>
+                                </q-dialog>
+
+                                <!-- Remarks modal -->
+                                <q-dialog v-model="showRemarks" persistent transition-show="scale"
+                                    transition-hide="scale">
+                                    <q-card style="min-width: 50%s">
+                                        <q-card-section>
+                                            <div class="text-h6">Remarks</div>
+                                        </q-card-section>
+
+                                        <q-card-section>
+                                            {% include 'Accountant/entry-detail.html' %}
+                                            <q-input v-model="remarks" type="textarea" outlined
+                                                label="Remarks"></q-input>
+                                        </q-card-section>
+
+                                        <q-card-actions align="right">
+                                            <q-btn flat label="Cancel" v-close-popup></q-btn>
+                                            <q-btn color="primary" label="Save" @click="saveRemarks"></q-btn>
+                                        </q-card-actions>
+                                    </q-card>
+                                </q-dialog>
+
     </div>
-    {% endverbatim %}
+    </q-td>
+
+
+
+
+    </template>
+    </q-table>
+    </q-page>
+    </q-page-container>
+
+    </q-layout>
+    </div>
 
     <!-- Add the following at the end of your body tag -->
     <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
@@ -92,33 +157,42 @@
     <script src="https://unpkg.com/vue-router@4"></script>
 
     <script>
-        const { useQuasar } = Quasar
-        const { ref, onMounted } = Vue
-
-        const routes = [
-            { path: '/trip', component: { template: '<div>Trip</div>' } },
-            { path: '/attendees', component: { template: '<div>Members</div>' } },
-        ]
-
-        const router = VueRouter.createRouter({
-            history: VueRouter.createWebHashHistory(),
-            routes
-        })
+        const { useQuasar, date } = Quasar
+        const { ref, onMounted, computed } = Vue
+        const filter = ref('')
 
         const app = Vue.createApp({
             setup() {
                 const $q = useQuasar()
 
+                // For modals
+                const showDetail = ref(false)
+                const showRemarks = ref(false)
+                const selectedRow = ref({})
+                const remarks = ref('')
+
+
+                const startDate = ref('{{ form.start_date.value|default_if_none:"" }}')
+                const endDate = ref('{{ form.end_date.value|default_if_none:"" }}')
+
+
+                //For the tables
                 const rows = ref([])
                 const count = ref(0)
                 const loading = ref(false)
 
+                // For the formatting of the money
                 const peso = val => `₱${Number(val ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+                const dateFormat = (val) => val ? date.formatDate(val, 'MMMM D, YYYY hh:mm:ss A') : '';
+
 
                 const columns = [
                     { name: 'row_num', label: 'Row', field: 'row_num', sortable: true, align: 'left' },
                     { name: 'leader.last_name', label: 'Leader Name', field: row => `${row.leader?.first_name ?? ''} ${row.leader?.last_name ?? ''}`.trim(), sortable: true, align: 'left' },
-                    { name: 'date_time_arrived', label: 'Date and Time Arrived', field: 'date_time_arrived', align: 'right', sortable: true },
+                    {
+                        name: 'date_time_arrived', label: 'Date and Time Arrived', field: 'date_time_arrived', align: 'right', sortable: true,
+                        format: dateFormat, sort: (a, b) => new Date(a).getTime() - new Date(b).getTime()
+                    },
                     { name: 'campus', label: 'Campus', field: row => row.campus?.name ?? '', align: 'right', sortable: true },
                     { name: 'subsidy_amount', label: 'Subsidy Amount (PhP)', field: 'subsidy_amount', align: 'right', sortable: true, format: peso },
                     { name: 'amount_released', label: 'Amount Released (PhP)', field: 'amount_released', align: 'right', sortable: true, format: peso },
@@ -127,9 +201,7 @@
                     { name: 'actions', label: 'Actions', field: 'id', align: 'center' }
                 ]
 
-                function showError(message) {
-                    $q.notify({ type: 'negative', message, position: 'top' })
-                }
+
 
                 async function fetchCashierData() {
                     loading.value = true
@@ -153,7 +225,6 @@
 
                         const data = await response.json()
                         if (data.status === 'success') {
-                            console.log(data)
                             count.value = data.count
                             rows.value = data.data
                         }
@@ -165,20 +236,130 @@
                     }
                 }
 
+
+                async function viewDetail(row) {
+                    const id = row.id
+
+                    const data = await fetch(`/accounting/${id}/details/`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    }).then(response => {
+                        if (!response.ok) {
+                            throw new Error('Failed to fetch details')
+                        }
+                        return response.json()
+                    }).then(result => {
+                        if (result.status !== 'success') {
+                            throw new Error(result.message || 'Request failed')
+                        }
+                        console.log('Result', result)
+                        selectedRow.value = result.data
+                        showDetail.value = true
+                    }).catch(err => {
+                        $q.notify({ type: 'negative', message: err.message })
+                    })
+
+                    showDetail.value = true
+                }
+
+                function openRemarksModal(row) {
+                    selectedRow.value = row
+                    remarks.value = row.remarks || ''
+                    showRemarks.value = true
+                }
+
+                function saveRemarks() {
+                    // call your API here
+                    showRemarks.value = false
+                }
+
+                function parseDate(r) {
+                    return new Date(r.created_at).toISOString()
+                }
+
+                function showError(message) {
+                    $q.notify({ type: 'negative', message, position: 'top' })
+                }
+
                 onMounted(fetchCashierData)
 
-                return { rows, columns, count, loading, fetchCashierData }
+                // For the dialog / modal
+
+                const hasImages = computed(() => !!selectedRow.value?.images?.length)
+
+                // Adjust this to whatever your original status logic was
+                const amountReleased = computed(() => Number(selectedRow.value?.amount_released ?? 0))
+
+                const status = computed(() => {
+                    const d = selectedRow.value || {}
+                    if (d.rejected) {
+                        return { color: '#e53e3e', bg: '#fff5f5', text: 'REJECTED' }
+                    } else if (d.is_late) {
+                        return { color: '#718096', bg: '#f7fafc', text: 'LATE' }
+                    } else if (amountReleased.value > 0) {
+                        return { color: '#38a169', bg: '#f0fff4', text: 'APPROVED' }
+                    }
+                    return { color: '#d69e2e', bg: '#fffaf0', text: 'PENDING' }
+                })
+
+                const formattedSchedule = computed(() => {
+                    const d = selectedRow.value || {}
+                    const schedule = d.service_schedule
+                    if (!schedule) return ''
+
+                    const campusName = d.campus ? d.campus.name : 'N/A'
+                    const scheduleDay = schedule.day || ''
+
+                    let timeStr = schedule.time
+                    if (timeStr) {
+                        const [hours, minutes] = timeStr.split(':')
+                        let hour = parseInt(hours, 10)
+                        const ampm = hour >= 12 ? 'PM' : 'AM'
+                        hour = hour % 12 || 12
+                        timeStr = `${hour}:${minutes} ${ampm}`
+                    }
+
+                    return `${campusName} | ${scheduleDay} ${timeStr ?? ''}`.trim()
+                })
+
+                const statusColor = computed(() => status.value.color)
+                const statusBg = computed(() => status.value.bg)
+                const statusText = computed(() => status.value.text)
+
+                const bigValueStyle = computed(() => ({
+                    fontSize: '1.6rem', fontWeight: 800, color: statusColor.value
+                }))
+
+                const formatDate = val => val ? date.formatDate(val, 'MMMM D, YYYY') : 'N/A'
+                const formatDateTime = val => val ? date.formatDate(val, 'MMMM D, YYYY hh:mm:ss A') : 'N/A'
+
+                const openImage = url => window.open(url, '_blank')
+
+                return {
+                    rows, columns, count, loading, fetchCashierData, startDate, endDate, filter,
+                    showDetail,
+                    showRemarks,
+                    selectedRow,
+                    remarks,
+                    viewDetail,
+                    openRemarksModal,
+                    saveRemarks,
+                    formatDate, formatDateTime,
+                    hasImages, statusColor, statusBg, statusText, bigValueStyle, formattedSchedule, openImage
+                }
             }
         })
 
         app.use(Quasar, {
             config: {},
-            plugins: { Notify: Quasar.Notify }
+            plugins: { Notify: Quasar.Notify, }
         })
 
-        app.use(router)
+        app.config.compilerOptions.delimiters = ['[[', ']]']
         app.mount('#q-app')
     </script>
-</body>
 
-</html>
+{% endblock %}

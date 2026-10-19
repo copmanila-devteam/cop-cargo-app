@@ -968,6 +968,7 @@
             </div>
             <div class="header-actions">
                 <button class="refresh-btn" data-action="click->cashier#refresh">🔄 Refresh Data</button>
+                
                 <form action="{% url 'logout-cargo' %}" method="post" style="margin: 0;">
                     {% csrf_token %}
                     <button class="logout-btn" type="submit">Logout</button>
@@ -982,7 +983,7 @@
         <div data-cashier-target="error" class="error hidden"></div>
 
         <div class="table-wrapper">
-            <form class="d-flex align-items-end gap-3 mb-3" method="POST" action="{% url 'cashier' %}">
+            <form class="d-flex align-items-end gap-3 mb-3" method="POST" action="{% url 'accounting' %}">
                 {% csrf_token %}
                 <div>
                     {{ form.start_date.label_tag }}

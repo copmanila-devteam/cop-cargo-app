@@ -665,9 +665,10 @@ class CashierView(LoginRequiredMixin, View):
 
         else:
             # If the user is not authenticated, you might want to redirect them to the login page or show a 404 page. Adjust this as needed.
-            redirect_url = reverse('login-cargo')  # Assuming 'login-cargo' is the name of your login URL
-
-            # return render(request, 'error_pages/404_page.html', status=404)
+            if not user.is_authenticated:
+                redirect_url = reverse('login-cargo')  # Assuming 'login-cargo' is the name of your login URL
+            else:
+                return render(request, 'error_pages/404_page.html', status=404)
 
         return super().dispatch(request, *args, **kwargs)
 
@@ -1029,116 +1030,69 @@ class AccountingView(LoginRequiredMixin, View):
 
         else:
             # If the user is not authenticated, you might want to redirect them to the login page or show a 404 page. Adjust this as needed.
-            redirect_url = reverse('login-cargo')  # Assuming 'login-cargo' is the name of your login URL
+            if not user.is_authenticated:
+                redirect_url = reverse('login-cargo')  # Assuming 'login-cargo' is the name of your login URL
 
-            # return render(request, 'error_pages/404_page.html', status=404)
+            else:
+                return render(request, 'error_pages/404_page.html', status=404)
 
         return super().dispatch(request, *args, **kwargs)
 
 
 
     def get(self, request, id=None, *args, **kwargs):
-
         if id:
-
-            return self.get_cashier_detail(request, id)
-
-        
+            return self.get_cashier_detail(request, id)     
 
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-
             return self.get_cashier_list(request)
 
-        
-
         form = ReportDateRangeFilterForm()
-
         return render(request, 'Accountant/index-2.html', {'form': form})
 
-
-
-
-
     def post(self, request, id=None, *args, **kwargs):
-
         form = ReportDateRangeFilterForm(request.POST)
 
-
-
+        print(f'Response: {form}')
         if form.is_valid():
-
-           
-
             start_date = form.cleaned_data.get('start_date')
-
             end_date = form.cleaned_data.get('end_date')
-
             user = self.request.user
 
-
-
             start_date_format = start_date.strftime('%B %d, %Y')
-
             end_date_format = end_date.strftime('%B %d, %Y')
 
             response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-
-          
-
             response['Content-Disposition'] = f'attachment; filename="Cashier Report {start_date_format} - {end_date_format}.xlsx"'
 
            
-
-
-
             cashier_data = Cashier.objects.filter(Q(date__gte=start_date) & Q(date__lte=end_date),approved_by__isnull=False).order_by('-time_arrived') if user.campus.name == 'Campus Main' else Cashier.objects.filter(Q(date__gte=start_date) & Q(date__lte=end_date), approved_by__isnull=False ,campus=user.campus).order_by('-time_arrived')
 
-
-
             wb = openpyxl.Workbook()
-
             ws = wb.active
 
             ws.title = 'Cashier'
-
-
-
             headers = ['Leader Name', 'Origin','Campus', 'Service Schedule', 'Date & Time Arrived', 'Vehicle Type','Number of Members','Subsidy Amount','Amount Released','Remarks']
 
             ws.append(headers)
 
-
-
             for row_num, cashier in enumerate(cashier_data, start=2):
-
                 num_members = CargoDetails.objects.filter(cashier=cashier).count()
-
                 time_arrived = cashier.time_arrived.astimezone()
-
+               
                 ws.append(
-
                     [
 
                         f'{cashier.leader.first_name} {cashier.leader.last_name}',
-
                         cashier.start_location.name,
-
                         cashier.campus.name,
-
                         str(cashier.service_schedule),
-
                         time_arrived.strftime('%B %d, %Y %I:%M %p'),
-
                         cashier.vehicle.name,
-
                         num_members,
-
                         cashier.subsidy_amount,
-
                         cashier.amount_released,
-
                         cashier.remarks,
-
                     ])
 
                 ws.cell(row=row_num, column=8).number_format = '0.00'
@@ -1153,12 +1107,8 @@ class AccountingView(LoginRequiredMixin, View):
 
                            showLastColumn=False, showRowStripes=True, showColumnStripes=False)
 
-            
-
             tab.tableStyleInfo = style
-
             ws.add_table(tab)
-
             wb.save(response)
 
             return response

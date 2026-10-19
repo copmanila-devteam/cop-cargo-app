@@ -265,20 +265,14 @@ class CargoView(LoginRequiredMixin, TemplateView):
     login_url = 'login-cargo'
 
     def dispatch(self, request, *args, **kwargs):
-
         user = self.request.user
 
         if user.is_authenticated:
-
             if user.type not in ['LE']:
-
                 return redirect(Usertype[user.type])
 
         else:
-
             return render(request, 'error_pages/404_page.html')
-
-        
 
         return super().dispatch(request, *args, **kwargs)
 
@@ -1059,7 +1053,7 @@ class AccountingView(LoginRequiredMixin, View):
 
         form = ReportDateRangeFilterForm()
 
-        return render(request, 'Accountant/index.html', {'form': form})
+        return render(request, 'Accountant/index-2.html', {'form': form})
 
 
 

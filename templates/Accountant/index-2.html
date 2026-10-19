@@ -1,0 +1,184 @@
+<!doctype html>
+<html>
+<!--
+    WARNING! Make sure that you match all Quasar related
+    tags to the same version! (Below it's "@2.34.0")
+  -->
+
+<head>
+    <title>Accounting Dashboard</title>
+    <link
+        href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900|Material+Icons|Material+Icons+Outlined|Material+Icons+Round|Material+Icons+Sharp"
+        rel="stylesheet" type="text/css">
+    <link href="https://cdn.jsdelivr.net/npm/ionicons@^4.0.0/dist/css/ionicons.min.css" rel="stylesheet"
+        type="text/css">
+    <link href="https://cdn.jsdelivr.net/npm/eva-icons@^1.0.0/style/eva-icons.css" rel="stylesheet" type="text/css">
+    <link href="https://maxst.icons8.com/vue-static/landings/line-awesome/line-awesome/1.3.0/css/line-awesome.min.css"
+        rel="stylesheet" type="text/css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@^1.0.0/font/bootstrap-icons.css" rel="stylesheet"
+        type="text/css">
+    <link href="https://cdn.jsdelivr.net/npm/animate.css@^4.0.0/animate.min.css" rel="stylesheet" type="text/css">
+    <link href="https://cdn.jsdelivr.net/npm/quasar@2.34.0/dist/quasar.prod.css" rel="stylesheet" type="text/css">
+</head>
+
+<body>
+    <!-- example of injection point where you write your app template -->
+    <div id="q-app">
+        <q-layout view="hHh lpR fFf">
+            <q-header reveal bordered class="bg-white text-green q-pa-md" height-hint="98">
+                <q-toolbar>
+                    <q-img bordered width="96px" height="auto" alt="Quasar logo"
+                        src="https://cop-cargo.com/static/img/cargo_logo.png"></q-img> |
+                    <q-toolbar-title>
+                        Accounting
+                    </q-toolbar-title>
+
+                    <form action="{% url 'logout-cargo' %}" method="post" class="q-ml-sm" style="margin: 0;">
+                        {% csrf_token %}
+                        <q-btn flat dense no-caps icon="logout" label="Logout" type="submit"></q-btn>
+                    </form>
+                </q-toolbar>
+
+                <q-btn push color="secondary" class="q-ma-md" label="Refresh Data" @click="fetchCashierData"></q-btn>
+
+
+            </q-header>
+
+            <q-page-container>
+                {% verbatim %}
+                <q-page padding>
+                    <div class="text-h6 q-mb-md">Vouchers: <span v-text="count"></span></div>
+
+                    <q-table :rows="rows" :columns="columns" row-key="row_num" :loading="loading" flat bordered>
+                        <template v-slot:body-cell-completed="props">
+                            <!-- For transforming the Completed Status to an icon-->
+                            <q-td :props="props">
+                                <q-icon :name="props.value ? 'check_circle' : 'cancel'"
+                                    :color="props.value ? 'positive' : 'negative'" size="sm"></q-icon>
+                            </q-td>
+
+                        </template>
+
+                        <!-- Actions column: buttons -->
+                        <template v-slot:body-cell-actions="props">
+                            <q-td :props="props">
+                                <div class="row no-wrap justify-center q-gutter-xs">
+
+                                    <q-btn dense unelevated color="primary" icon="visibility" label="View"
+                                        @click="viewDetail(props.row)"></q-btn>
+
+                                    <q-btn dense outline color="info" icon="comment" label="Remarks"
+                                        @click="openRemarksModal(props.row)"></q-btn>
+
+                                    <q-btn v-if="!props.row.completed" dense unelevated color="positive"
+                                        icon="confirmation_number" label="Verify" @click="openVoucherModal(props.row)">
+                                        <q-tooltip>Verify Voucher</q-tooltip>
+                                    </q-btn>
+
+                                </div>
+                            </q-td>
+                        </template>
+                    </q-table>
+                </q-page>
+            </q-page-container>
+
+        </q-layout>
+    </div>
+    {% endverbatim %}
+
+    <!-- Add the following at the end of your body tag -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/quasar@2.34.0/dist/quasar.umd.prod.js"></script>
+    <script src="https://unpkg.com/vue-router@4"></script>
+
+    <script>
+        const { useQuasar } = Quasar
+        const { ref, onMounted } = Vue
+
+        const routes = [
+            { path: '/trip', component: { template: '<div>Trip</div>' } },
+            { path: '/attendees', component: { template: '<div>Members</div>' } },
+        ]
+
+        const router = VueRouter.createRouter({
+            history: VueRouter.createWebHashHistory(),
+            routes
+        })
+
+        const app = Vue.createApp({
+            setup() {
+                const $q = useQuasar()
+
+                const rows = ref([])
+                const count = ref(0)
+                const loading = ref(false)
+
+                const peso = val => `₱${Number(val ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+
+                const columns = [
+                    { name: 'row_num', label: 'Row', field: 'row_num', sortable: true, align: 'left' },
+                    { name: 'leader.last_name', label: 'Leader Name', field: row => `${row.leader?.first_name ?? ''} ${row.leader?.last_name ?? ''}`.trim(), sortable: true, align: 'left' },
+                    { name: 'date_time_arrived', label: 'Date and Time Arrived', field: 'date_time_arrived', align: 'right', sortable: true },
+                    { name: 'campus', label: 'Campus', field: row => row.campus?.name ?? '', align: 'right', sortable: true },
+                    { name: 'subsidy_amount', label: 'Subsidy Amount (PhP)', field: 'subsidy_amount', align: 'right', sortable: true, format: peso },
+                    { name: 'amount_released', label: 'Amount Released (PhP)', field: 'amount_released', align: 'right', sortable: true, format: peso },
+                    { name: 'completed', label: 'Completed', field: 'completed', align: 'right', sortable: true },
+                    { name: 'voucher', label: 'Voucher', field: 'voucher', align: 'right', sortable: true },
+                    { name: 'actions', label: 'Actions', field: 'id', align: 'center' }
+                ]
+
+                function showError(message) {
+                    $q.notify({ type: 'negative', message, position: 'top' })
+                }
+
+                async function fetchCashierData() {
+                    loading.value = true
+                    try {
+                        const response = await fetch(`/fetch_vouchers/`, {
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                        })
+
+                        if (response.status === 401 || response.status === 403) {
+                            showError('Session expired. Please login again.')
+                            window.location.href = '/login/'
+                            return
+                        }
+
+                        const contentType = response.headers.get('content-type')
+                        if (!contentType || !contentType.includes('application/json')) {
+                            console.error('Expected JSON but got:', contentType)
+                            showError('Server returned an unexpected response. Please refresh manually.')
+                            return
+                        }
+
+                        const data = await response.json()
+                        if (data.status === 'success') {
+                            console.log(data)
+                            count.value = data.count
+                            rows.value = data.data
+                        }
+                    } catch (error) {
+                        console.error(error)
+                        showError('Failed to load data. Please check your connection.')
+                    } finally {
+                        loading.value = false
+                    }
+                }
+
+                onMounted(fetchCashierData)
+
+                return { rows, columns, count, loading, fetchCashierData }
+            }
+        })
+
+        app.use(Quasar, {
+            config: {},
+            plugins: { Notify: Quasar.Notify }
+        })
+
+        app.use(router)
+        app.mount('#q-app')
+    </script>
+</body>
+
+</html>

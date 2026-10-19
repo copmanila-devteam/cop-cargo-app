@@ -5,8 +5,8 @@ from .models import Event, RemarksList
 
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
-    list_display = ['name', 'start_date', 'end_date', 'description']
-    search_fields = ['name', 'start_date', 'end_date', 'description']
+    list_display = ['name', 'campus__name', 'start_date', 'end_date', 'description']
+    search_fields = ['name', 'campus__name', 'start_date', 'end_date', 'description']
 
 @admin.register(RemarksList)
 class RemarksListAdmin(admin.ModelAdmin):

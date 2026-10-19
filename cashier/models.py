@@ -65,10 +65,10 @@ class Campus(models.Model):
 
 class Event(models.Model):
     name = models.CharField(max_length=200)
-    description = models.TextField(max_length=200) # FIX 10/19/2026: Updated the field type for description from Char to Text
-    start_date = models.DateField() 
-    end_date = models.DateField()
-    campus = models.ForeignKey(Campus, null=True, on_delete=models.SET_NULL, related_name='campus')
+    description = models.TextField(max_length=200, null=True, blank=True) # FIX 10/19/2026: Updated the field type for description from Char to Texts
+    start_date = models.DateField(null=True, blank=True) 
+    end_date = models.DateField(null=True, blank=True)
+    campus = models.ForeignKey(Campus, null=True, blank=True, on_delete=models.SET_NULL, related_name='campus')
     priority = models.PositiveIntegerField(
         default=0,
         help_text="Higher number = higher priority"

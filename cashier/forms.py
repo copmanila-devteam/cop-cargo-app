@@ -42,6 +42,7 @@ class CashierEntryForm(forms.ModelForm):
     events = forms.ModelChoiceField(
         queryset=Event.objects.none(),
         required=True,
+        label='Event / Service',
         widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_events'})
     )
 

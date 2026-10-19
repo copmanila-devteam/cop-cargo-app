@@ -130,9 +130,11 @@ class CashierEntryForm(forms.ModelForm):
 
         super().__init__(*args, **kwargs)
 
+        # FIX: Remove Service Schedule among the list of Campus
+        self.fields['campus'].queryset = Campus.objects.exclude(name='Special Event')
+
         # Filters schedules based on campus during form validation
         if 'campus' in self.data:
-
             try:
                 campus_id = int(self.data.get('campus'))
                 self.fields['service_schedule'].queryset = ServiceSchedule.objects.filter(campus_id=campus_id)

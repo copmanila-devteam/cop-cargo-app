@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 
 from django.contrib.auth.views import LogoutView
 
@@ -28,6 +28,8 @@ urlpatterns = [
     path('cashier/<int:id>/details/', CashierView.as_view(), name='cashier-detail'),
 
     path('update_remarks/<int:pk>/', views.update_remarks, name='update-remarks'),
+
+    path('', include('cashier.remarks_urls')),
 
     path('update_amount/<int:pk>/', views.update_amount, name='update-amount'),
 

@@ -76,7 +76,7 @@
 
                         <!-- Search bar -->
                         <template #top-right>
-                            <q-input borderless dense debounce="300" v-model="filter" placeholder="Search">
+                            <q-input outlined dense debounce="300" v-model="filter" placeholder="Search">
                                 <template #append>
                                     <q-icon name="search" />
                                 </template>
@@ -119,22 +119,7 @@
                                 <!-- Remarks modal -->
                                 <q-dialog v-model="showRemarks" persistent transition-show="scale"
                                     transition-hide="scale">
-                                    <q-card style="min-width: 50%s">
-                                        <q-card-section>
-                                            <div class="text-h6">Remarks</div>
-                                        </q-card-section>
-
-                                        <q-card-section>
-                                            {% include 'Accountant/entry-detail.html' %}
-                                            <q-input v-model="remarks" type="textarea" outlined
-                                                label="Remarks"></q-input>
-                                        </q-card-section>
-
-                                        <q-card-actions align="right">
-                                            <q-btn flat label="Cancel" v-close-popup></q-btn>
-                                            <q-btn color="primary" label="Save" @click="saveRemarks"></q-btn>
-                                        </q-card-actions>
-                                    </q-card>
+                                    {% include 'Accountant/remarks.html' %}
                                 </q-dialog>
 
     </div>
@@ -170,6 +155,20 @@
                 const showRemarks = ref(false)
                 const selectedRow = ref({})
                 const remarks = ref('')
+                const remarksId = ref(null)
+                const loadingRemarks = ref(false)
+                const savingRemarks = ref(false)
+
+                // Remark roles: only the logged-in user's role can be edited
+                const currentUserRole = '{{ request.user.type }}'
+                const remarkRoles = [
+                    { code: 'PTR', title: 'Pastor' },
+                    { code: 'FI', title: 'Cashier' },
+                    { code: 'ACNT', title: 'Accountant' },
+                ]
+                const canRemark = remarkRoles.some(r => r.code === currentUserRole)
+                const roleRemarks = ref({})
+                const roleDrafts = ref({ PTR: '', FI: '', ACNT: '' })
 
 
                 const startDate = ref('{{ form.start_date.value|default_if_none:"" }}')
@@ -180,6 +179,7 @@
                 const rows = ref([])
                 const count = ref(0)
                 const loading = ref(false)
+                const pagination = ref({ sortBy: null, descending: false, page: 1, rowsPerPage: 10 })
 
                 // For the formatting of the money
                 const peso = val => `₱${Number(val ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
@@ -265,15 +265,60 @@
                     showDetail.value = true
                 }
 
-                function openRemarksModal(row) {
+                // Fetch the latest remarks for the targeted entry when the dialog opens
+                async function openRemarksModal(row) {
                     selectedRow.value = row
-                    remarks.value = row.remarks || ''
+                    remarksId.value = row.id
+                    remarks.value = ''
+                    roleRemarks.value = {}
+                    roleDrafts.value = { PTR: '', FI: '', ACNT: '' }
                     showRemarks.value = true
+                    loadingRemarks.value = true
+                    try {
+                        const response = await fetch(`/accounting/${row.id}/details/`, {
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                        })
+                        const result = await response.json()
+                        if (!response.ok || result.status !== 'success') {
+                            throw new Error(result.message || 'Failed to fetch remarks')
+                        }
+                        remarks.value = result.data.remarks ?? ''
+                        roleRemarks.value = result.data.role_remarks ?? {}
+                        for (const r of remarkRoles) {
+                            roleDrafts.value[r.code] = roleRemarks.value[r.code]?.description ?? ''
+                        }
+                    } catch (err) {
+                        showRemarks.value = false
+                        showError(err.message)
+                    } finally {
+                        loadingRemarks.value = false
+                    }
                 }
 
-                function saveRemarks() {
-                    // call your API here
-                    showRemarks.value = false
+                function getCsrfToken() {
+                    return document.querySelector('[name=csrfmiddlewaretoken]')?.value
+                        || decodeURIComponent((document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '')
+                }
+
+                async function saveRemarks() {
+                    savingRemarks.value = true
+                    try {
+                        const response = await fetch(`/remarks/${remarksId.value}/submit/`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                            body: JSON.stringify({ remarks: roleDrafts.value[currentUserRole] })
+                        })
+                        const result = await response.json()
+                        if (!response.ok || result.status !== 'success') throw new Error(result.message)
+                        // Reflect the saved remark, its time and its author right in the dialog
+                        roleRemarks.value = { ...roleRemarks.value, [result.role]: result.remark }
+                        roleDrafts.value[result.role] = result.remark.description
+                        $q.notify({ type: 'positive', message: 'Remark saved' })
+                    } catch (err) {
+                        showError('Failed to save remarks: ' + err.message)
+                    } finally {
+                        savingRemarks.value = false
+                    }
                 }
 
                 function parseDate(r) {
@@ -339,11 +384,12 @@
                 const openImage = url => window.open(url, '_blank')
 
                 return {
-                    rows, columns, count, loading, fetchCashierData, startDate, endDate, filter,
+                    rows, columns, count, loading, pagination, fetchCashierData, startDate, endDate, filter,
                     showDetail,
                     showRemarks,
                     selectedRow,
-                    remarks,
+                    remarks, loadingRemarks, savingRemarks,
+                    currentUserRole, remarkRoles, canRemark, roleRemarks, roleDrafts,
                     viewDetail,
                     openRemarksModal,
                     saveRemarks,

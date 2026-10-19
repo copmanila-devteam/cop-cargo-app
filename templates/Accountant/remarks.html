@@ -1,0 +1,30 @@
+<q-card style="min-width: 50%">
+  <q-card-section>
+    <div class="text-h6">Remarks</div>
+  </q-card-section>
+
+  <q-card-section>
+    <h6 class="detail-label">System Generated Remarks</h6>
+    <q-input v-model="remarks" type="textarea" outlined autogrow
+             label="System Generated Remarks" :disable="loadingRemarks" readonly></q-input>
+  </q-card-section>
+
+  <!-- One section per role. Only the section matching the logged-in user's role is editable. -->
+  <q-card-section v-for="r in remarkRoles" :key="r.code">
+    <h6 class="detail-value">[[ r.title ]]'s Remark</h6>
+    <small class="detail-label">
+      Last updated:
+      [[ roleRemarks[r.code] ? formatDateTime(roleRemarks[r.code].timestamp) + ' by ' + roleRemarks[r.code].user_name : 'N/A' ]]
+    </small>
+    <q-input v-model="roleDrafts[r.code]" type="textarea" outlined autogrow maxlength="300"
+             :label="r.title + '\'s Remark'"
+             :readonly="r.code !== currentUserRole"
+             :disable="loadingRemarks || savingRemarks"
+             :bg-color="r.code === currentUserRole ? 'white' : 'grey-2'"></q-input>
+  </q-card-section>
+
+  <q-card-actions align="right">
+    <q-btn flat label="Close" v-close-popup :disable="savingRemarks"></q-btn>
+    <q-btn v-if="canRemark" color="positive" label="Submit" :loading="savingRemarks" @click="saveRemarks"></q-btn>
+  </q-card-actions>
+</q-card>

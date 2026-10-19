@@ -35,6 +35,7 @@ from .helpers import get_image_hash
 from openpyxl.worksheet.table import Table, TableStyleInfo
 import openpyxl
 import secrets
+from .remarks_views import get_role_remarks
 
 
 
@@ -1298,6 +1299,8 @@ class AccountingView(LoginRequiredMixin, View):
 
                 'remarks': cashier.remarks,
 
+                'role_remarks': get_role_remarks(cashier),
+
                 'time_arrived': cashier.time_arrived.isoformat() if cashier.time_arrived else None,
 
                 'images': [{'url': request.build_absolute_uri(img.image.url), 'uploaded_at': img.uploaded_at.isoformat()} for img in cashier.images.all()],
@@ -1306,7 +1309,7 @@ class AccountingView(LoginRequiredMixin, View):
 
                     {
 
-                        'first_name': u.cargo.attendee.first_name, 
+                        'first_name': u.cargo.attendee.first_name,
 
                         'middle_name': u.cargo.attendee.middle_name,
 
@@ -1324,7 +1327,7 @@ class AccountingView(LoginRequiredMixin, View):
 
         except Cashier.DoesNotExist:
 
-            return JsonResponse({'status': 'error', 'message': 'Not found'}, status=404)     
+            return JsonResponse({'status': 'error', 'message': 'Not found'}, status=404)
 
 
 @login_required

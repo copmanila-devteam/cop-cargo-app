@@ -1,0 +1,42 @@
+[
+  {
+    "model": "Account.authroute",
+    "pk": 1,
+    "fields": {
+      "name": "Pastor",
+      "code": "PTR",
+      "url": "/approvals_list/",
+      "updated_on": "2026-10-20T00:00:00"
+    }
+  },
+  {
+    "model": "Account.authroute",
+    "pk": 2,
+    "fields": {
+      "name": "FI",
+      "code": "FI",
+      "url": "/",
+      "updated_on": "2026-10-20T00:00:00"
+    }
+  },
+  {
+    "model": "Account.authroute",
+    "pk": 3,
+    "fields": {
+      "name": "Leader",
+      "code": "LE",
+      "url": "/trip",
+      "updated_on": "2026-10-20T00:00:00"
+    }
+  },
+  {
+    "model": "Account.authroute",
+    "pk": 4,
+    "fields": {
+      "name": "Accounting",
+      "code": "ACNT",
+      "url": "/accounting/",
+      "updated_on": "2026-10-20T00:00:00"
+    }
+  }
+]

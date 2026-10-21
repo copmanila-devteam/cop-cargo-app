@@ -29,10 +29,17 @@
 
                     <q-card bordered class="my-card q-mb-md">
                         <q-card-section>
-                            <div class="text-h6 ">Vouchers: <span v-text="count"></span></div>
+                            <div class="text-h6 ">Vouchers: <span v-text="filteredRows.length"></span></div>
                         </q-card-section>
 
                         <q-card-section>
+                            <!-- Filter Campus -->
+                            <q-select v-model="selectedCampus" :options="campusOptions" label="Filter Campus"
+                                emit-value map-options outlined dense style="max-width: 250px"></q-select>
+                        </q-card-section>
+
+                        <q-card-section>
+                        
                             <form method="POST" action="{% url 'accounting' %}"
                                 class="row items-end q-col-gutter-md q-mb-md">
                                 {% csrf_token %}
@@ -61,7 +68,7 @@
 
 
 
-                    <q-table :rows="rows" :columns="columns" row-key="row_num" :loading="loading" flat bordered
+                    <q-table :rows="filteredRows" :columns="columns" row-key="row_num" :loading="loading" flat bordered
                         v-model:pagination="pagination" :filter="filter" :rows-per-page-options="[10, 25, 50, 100]"
                         rows-per-page-label="Show entries:" :pagination-label="paginationLabel"
                         no-data-label="No data available in table" no-results-label="No matching records found">
@@ -136,6 +143,8 @@
     </q-layout>
     </div>
 
+    {{ campuses|json_script:"campuses-data" }}
+
     <!-- Add the following at the end of your body tag -->
     <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/quasar@2.34.0/dist/quasar.umd.prod.js"></script>
@@ -181,6 +190,17 @@
                 const loading = ref(false)
                 const pagination = ref({ sortBy: null, descending: false, page: 1, rowsPerPage: 10 })
 
+                // Campus filter: options come from every Campus record (passed in by AccountingView)
+                const selectedCampus = ref('All')
+                const campusOptions = [
+                    { label: 'All', value: 'All' },
+                    ...JSON.parse(document.getElementById('campuses-data').textContent)
+                        .map(c => ({ label: c.name, value: c.id }))
+                ]
+                const filteredRows = computed(() => selectedCampus.value === 'All'
+                    ? rows.value
+                    : rows.value.filter(row => row.campus?.id === selectedCampus.value))
+
                 // For the formatting of the money
                 const peso = val => `₱${Number(val ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
                 const dateFormat = (val) => val ? date.formatDate(val, 'MMMM D, YYYY hh:mm:ss A') : '';
@@ -206,7 +226,7 @@
                 async function fetchCashierData() {
                     loading.value = true
                     try {
-                        const response = await fetch(`/fetch_vouchers/`, {
+                        const response = await fetch(`{% url 'accounting' %}`, {
                             headers: { 'X-Requested-With': 'XMLHttpRequest' }
                         })
 
@@ -285,7 +305,7 @@
                         remarks.value = result.data.remarks ?? ''
                         roleRemarks.value = result.data.role_remarks ?? {}
                         for (const r of remarkRoles) {
-                            roleDrafts.value[r.code] = roleRemarks.value[r.code]?.description ?? ''
+                            roleDrafts.value[r.code] = roleRemarks.value[r.code]?.description ?? 'No remarks'
                         }
                     } catch (err) {
                         showRemarks.value = false
@@ -385,6 +405,7 @@
 
                 return {
                     rows, columns, count, loading, pagination, fetchCashierData, startDate, endDate, filter,
+                    selectedCampus, campusOptions, filteredRows,
                     showDetail,
                     showRemarks,
                     selectedRow,

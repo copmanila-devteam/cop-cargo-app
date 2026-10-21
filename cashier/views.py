@@ -15,7 +15,7 @@ from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods
 from datetime import datetime, timedelta, date
 from .forms import CashierEntryForm, PassengerForm, ReportFilterForm, ReportDateRangeFilterForm
-from .models import Cashier, Attendees, Matrix, ServiceSchedule, CashierImage, Voucher, CargoDetails, LeadersAttendees
+from .models import Cashier, Attendees, Matrix, ServiceSchedule, CashierImage, Voucher, CargoDetails, LeadersAttendees, Campus
 from Account.auth import Usertype
 from Account.models import UserType
 from django.contrib.auth.decorators import login_required
@@ -1050,12 +1050,12 @@ class AccountingView(LoginRequiredMixin, View):
             return self.get_cashier_list(request)
 
         form = ReportDateRangeFilterForm()
-        return render(request, 'Accountant/index-2.html', {'form': form})
+        campuses = list(Campus.objects.order_by('name').values('id', 'name'))
+        return render(request, 'Accountant/index-2.html', {'form': form, 'campuses': campuses})
 
     def post(self, request, id=None, *args, **kwargs):
         form = ReportDateRangeFilterForm(request.POST)
 
-        print(f'Response: {form}')
         if form.is_valid():
             start_date = form.cleaned_data.get('start_date')
             end_date = form.cleaned_data.get('end_date')
@@ -1080,17 +1080,17 @@ class AccountingView(LoginRequiredMixin, View):
 
             for row_num, cashier in enumerate(cashier_data, start=2):
                 num_members = CargoDetails.objects.filter(cashier=cashier).count()
-                time_arrived = cashier.time_arrived.astimezone()
-               
+                time_arrived = cashier.time_arrived.astimezone() if cashier.time_arrived else None
+
+                leader = cashier.leader
                 ws.append(
                     [
-
-                        f'{cashier.leader.first_name} {cashier.leader.last_name}',
-                        cashier.start_location.name,
-                        cashier.campus.name,
-                        str(cashier.service_schedule),
-                        time_arrived.strftime('%B %d, %Y %I:%M %p'),
-                        cashier.vehicle.name,
+                        f'{leader.first_name} {leader.last_name}' if leader else '',
+                        cashier.start_location.name if cashier.start_location else '',
+                        cashier.campus.name if cashier.campus else '',
+                        str(cashier.service_schedule) if cashier.service_schedule else '',
+                        time_arrived.strftime('%B %d, %Y %I:%M %p') if time_arrived else '',
+                        cashier.vehicle.name if cashier.vehicle else '',
                         num_members,
                         cashier.subsidy_amount,
                         cashier.amount_released,
@@ -1098,7 +1098,6 @@ class AccountingView(LoginRequiredMixin, View):
                     ])
 
                 ws.cell(row=row_num, column=8).number_format = '0.00'
-
                 ws.cell(row=row_num, column=9).number_format = '0.00'
 
                 
@@ -1136,7 +1135,7 @@ class AccountingView(LoginRequiredMixin, View):
                 .order_by('-time_arrived')
             )
 
-            if user.campus.name != "Main Campus":
+            if user.campus.name != 'Campus Main':
                 base_qs = base_qs.filter(campus=user.campus)
 
             # Evaluate queryset once

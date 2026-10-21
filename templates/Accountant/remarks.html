@@ -17,7 +17,6 @@
       [[ roleRemarks[r.code] ? formatDateTime(roleRemarks[r.code].timestamp) + ' by ' + roleRemarks[r.code].user_name : 'N/A' ]]
     </small>
     <q-input v-model="roleDrafts[r.code]" type="textarea" outlined autogrow maxlength="300"
-             :label="r.title + '\'s Remark'"
              :readonly="r.code !== currentUserRole"
              :disable="loadingRemarks || savingRemarks"
              :bg-color="r.code === currentUserRole ? 'white' : 'grey-2'"></q-input>

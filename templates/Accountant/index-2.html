@@ -3,430 +3,440 @@
 
 {% load static %}
 {% block content %}
-    <!-- example of injection point where you write your app template -->
-    <div id="q-app">
-        <q-layout view="hHh lpR fFf">
-            <q-header reveal bordered class="bg-white text-green q-pa-md" height-hint="98">
-                <q-toolbar>
-                    <q-img bordered width="96px" height="auto" alt="Quasar logo"
-                        src="{% static 'img/cargo_logo.png'%}"></q-img> |
-                    <q-toolbar-title>
-                        Accounting
-                    </q-toolbar-title>
+<!-- example of injection point where you write your app template -->
+<div id="q-app">
+    <q-layout view="hHh lpR fFf">
+        <q-header reveal bordered class="bg-white text-green q-pa-md" height-hint="98">
+            <q-toolbar>
+                <q-img bordered width="96px" height="auto" alt="CarGo logo"
+                    src="{% static 'img/cargo_logo.png'%}"></q-img> |
+                <q-toolbar-title>
+                    Accounting
+                </q-toolbar-title>
 
-                    <form action="{% url 'logout-cargo' %}" method="post" class="q-ml-sm" style="margin: 0;">
-                        {% csrf_token %}
-                        <q-btn color="negative" no-caps icon="logout" label="Logout" type="submit"></q-btn>
-                    </form>
-                </q-toolbar>
+                <form action="{% url 'logout-cargo' %}" method="post" class="q-ml-sm" style="margin: 0;">
+                    {% csrf_token %}
+                    <q-btn color="negative" no-caps icon="logout" label="Logout" type="submit"></q-btn>
+                </form>
+            </q-toolbar>
 
-                <q-btn push color="green" class="q-ma-md" label="Refresh Data" @click="fetchCashierData"></q-btn>
+        </q-header>
+        <q-page-container>
+            <q-page padding>
+
+                <q-card bordered class="my-card q-mb-md">
+                    <q-card-section>
+                        <h5>Welcome, {{ request.user.first_name }}! </h5>
+                        <div class="float-right">
+                            <q-chip  class="bg-green text-white" size="md">Campus Bookings: [[ filteredRows.length ]]</q-chip></span>
+                        </div>
+
+                        <p class="detail-label">{{ request.user.campus.name}}</p>
 
 
-            </q-header>
-            <q-page-container>
-                <q-page padding>
+                        <q-btn unelevated color="green" label="Refresh Data" @click="fetchCashierData"></q-btn>
 
-                    <q-card bordered class="my-card q-mb-md">
-                        <q-card-section>
-                            <div class="text-h6 ">Vouchers: <span v-text="filteredRows.length"></span></div>
-                        </q-card-section>
-
-                        <q-card-section>
-                            <!-- Filter Campus -->
-                            <q-select v-model="selectedCampus" :options="campusOptions" label="Filter Campus"
-                                emit-value map-options outlined dense style="max-width: 250px"></q-select>
-                        </q-card-section>
-
-                        <q-card-section>
                         
-                            <form method="POST" action="{% url 'accounting' %}"
-                                class="row items-end q-col-gutter-md q-mb-md">
-                                {% csrf_token %}
+                        
+                    </q-card-section>
+                    <q-separator></q-separator>
 
-                                <div class="col-12 col-sm-auto">
-                                    <q-input v-model="startDate" name="start_date" type="date" label="Start date"
-                                        stack-label outlined dense></q-input>
-                                </div>
+                    <q-card-section>
 
-                                <div class="col-12 col-sm-auto">
-                                    <q-input v-model="endDate" name="end_date" type="date" label="End date" stack-label
-                                        outlined dense :min="startDate"></q-input>
-                                </div>
+                        <span class="detail-label">Export Booking</span>
+                        <form method="POST" action="{% url 'accounting' %}" class="row items-end q-col-gutter-md">
+                            {% csrf_token %}
 
-                                <div class="col-12 col-sm-auto">
-                                    <q-btn type="submit" color="positive" icon="download" label="Export" unelevated
-                                        no-caps></q-btn>
-                                </div>
-                            </form>
+                            <div class="col-md-6 col-sm-12">
+                                <q-input v-model="startDate" name="start_date" type="date" label="Start date"
+                                    stack-label outlined dense></q-input>
+                            </div>
 
-                        </q-card-section>
+                            <div class="col-md-6 col-sm-12">
+                                <q-input v-model="endDate" name="end_date" type="date" label="End date" stack-label
+                                    outlined dense :min="startDate"></q-input>
+                            </div>
 
+                            <div class="col-md-12 col-sm-12">
+                                <q-btn type="submit" color="positive" icon="download" label="Export"
+                                    unelevated></q-btn>
+                            </div>
+                        </form>
 
-                        <q-separator dark inset />
-                    </q-card>
+                    </q-card-section>
 
-
-
-                    <q-table :rows="filteredRows" :columns="columns" row-key="row_num" :loading="loading" flat bordered
-                        v-model:pagination="pagination" :filter="filter" :rows-per-page-options="[10, 25, 50, 100]"
-                        rows-per-page-label="Show entries:" :pagination-label="paginationLabel"
-                        no-data-label="No data available in table" no-results-label="No matching records found">
-                        <template v-slot:body-cell-completed="props">
-                            <!-- For transforming the Completed Status to an icon-->
-                            <q-td :props="props">
-                                <q-icon :name="props.value ? 'check_circle' : 'cancel'"
-                                    :color="props.value ? 'positive' : 'negative'" size="sm"></q-icon>
-                            </q-td>
-
-                        </template>
-
-                        <!-- Search bar -->
-                        <template #top-right>
-                            <q-input outlined dense debounce="300" v-model="filter" placeholder="Search">
-                                <template #append>
-                                    <q-icon name="search" />
-                                </template>
-                            </q-input>
-                        </template>
-
-                        <!-- Actions column: buttons -->
-                        <template v-slot:body-cell-actions="props">
-                            <q-td :props="props">
-                                <div class="q-pa-md row q-gutter-md items-start">
-
-                                    <q-btn unelevated color="primary" icon="visibility" label="View"
-                                        @click="viewDetail(props.row)"></q-btn>
-
-                                    <q-btn outline color="info" icon="comment" label="Remarks"
-                                        @click="openRemarksModal(props.row)"></q-btn>
-
-                                </div>
-
-                                <!-- For modals-->
-
-                                <!-- View detail modal -->
-                                <q-dialog v-model="showDetail">
-                                    <q-card style="min-width: 50%">
-                                        <q-card-section class="bg-green row items-center q-pb-md">
-                                            <div class="text-h6">Entry Details</div>
-                                            <q-space></q-space>
-                                            <q-btn icon="close" flat round dense v-close-popup></q-btn>
-                                        </q-card-section>
-
-                                        <q-card-section>
-                                            <!-- show whatever fields your row has -->
-
-                                            {% include 'Accountant/entry-detail.html' %}
-
-                                        </q-card-section>
-                                    </q-card>
-                                </q-dialog>
-
-                                <!-- Remarks modal -->
-                                <q-dialog v-model="showRemarks" persistent transition-show="scale"
-                                    transition-hide="scale">
-                                    {% include 'Accountant/remarks.html' %}
-                                </q-dialog>
-
-    </div>
-    </q-td>
+                    <q-separator dark inset />
+                </q-card>
 
 
 
+                <q-table :rows="filteredRows" :columns="columns" row-key="row_num" :loading="loading" flat bordered
+                    v-model:pagination="pagination" :filter="filter" :rows-per-page-options="[10, 25, 50, 100]"
+                    rows-per-page-label="Show entries:" :pagination-label="paginationLabel"
+                    no-data-label="No CarGo Bookings found" no-results-label="No matching records found">
+                    <template v-slot:body-cell-completed="props">
+                        <!-- For transforming the Completed Status to an icon-->
+                        <q-td :props="props">
+                            <q-icon :name="props.value ? 'check_circle' : 'cancel'"
+                                :color="props.value ? 'positive' : 'negative'" size="sm"></q-icon>
+                        </q-td>
 
-    </template>
-    </q-table>
-    </q-page>
-    </q-page-container>
+                    </template>
 
-    </q-layout>
-    </div>
+                    <template #top-left>
+                        <!-- Filter Campus -->
+                        <q-select style="min-width: 300px" outlined dense v-model="selectedCampus"
+                            :options="campusOptions" label="Filter View by Campus" emit-value map-options outlined
+                            dense>
+                        </q-select>
+                    </template>
 
-    {{ campuses|json_script:"campuses-data" }}
+                    <!-- Search bar -->
+                    <template #top-right>
+                        <q-input style="min-width: 300px" outlined dense debounce="300" v-model="filter"
+                            placeholder="Search">
+                            <template #append>
+                                <q-icon name="search" />
+                            </template>
+                        </q-input>
+                    </template>
 
-    <!-- Add the following at the end of your body tag -->
-    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/quasar@2.34.0/dist/quasar.umd.prod.js"></script>
-    <script src="https://unpkg.com/vue-router@4"></script>
+                    <!-- Actions column: buttons -->
+                    <template v-slot:body-cell-actions="props">
+                        <q-td :props="props">
+                            <div class="q-pa-md row q-gutter-md items-start">
 
-    <script>
-        const { useQuasar, date } = Quasar
-        const { ref, onMounted, computed } = Vue
-        const filter = ref('')
+                                <q-btn unelevated color="primary" icon="visibility" label="View"
+                                    @click="viewDetail(props.row)"></q-btn>
 
-        const app = Vue.createApp({
-            setup() {
-                const $q = useQuasar()
+                                <q-btn outline color="info" icon="comment" label="Remarks"
+                                    @click="openRemarksModal(props.row)"></q-btn>
 
-                // For modals
-                const showDetail = ref(false)
-                const showRemarks = ref(false)
-                const selectedRow = ref({})
-                const remarks = ref('')
-                const remarksId = ref(null)
-                const loadingRemarks = ref(false)
-                const savingRemarks = ref(false)
+                            </div>
 
-                // Remark roles: only the logged-in user's role can be edited
-                const currentUserRole = '{{ request.user.type }}'
-                const remarkRoles = [
-                    { code: 'PTR', title: 'Pastor' },
-                    { code: 'FI', title: 'Cashier' },
-                    { code: 'ACNT', title: 'Accountant' },
-                ]
-                const canRemark = remarkRoles.some(r => r.code === currentUserRole)
-                const roleRemarks = ref({})
-                const roleDrafts = ref({ PTR: '', FI: '', ACNT: '' })
+                            <!-- For modals-->
 
+                            <!-- View detail modal -->
+                            <q-dialog v-model="showDetail">
+                                <q-card style="min-width: 50%">
+                                    <q-card-section class="bg-green row items-center q-pb-md">
+                                        <div class="text-h6">Entry Details</div>
+                                        <q-space></q-space>
+                                        <q-btn icon="close" flat round dense v-close-popup></q-btn>
+                                    </q-card-section>
 
-                const startDate = ref('{{ form.start_date.value|default_if_none:"" }}')
-                const endDate = ref('{{ form.end_date.value|default_if_none:"" }}')
+                                    <q-card-section>
+                                        <!-- show whatever fields your row has -->
 
+                                        {% include 'Accountant/entry-detail.html' %}
 
-                //For the tables
-                const rows = ref([])
-                const count = ref(0)
-                const loading = ref(false)
-                const pagination = ref({ sortBy: null, descending: false, page: 1, rowsPerPage: 10 })
+                                    </q-card-section>
+                                </q-card>
+                            </q-dialog>
 
-                // Campus filter: options come from every Campus record (passed in by AccountingView)
-                const selectedCampus = ref('All')
-                const campusOptions = [
-                    { label: 'All', value: 'All' },
-                    ...JSON.parse(document.getElementById('campuses-data').textContent)
-                        .map(c => ({ label: c.name, value: c.id }))
-                ]
-                const filteredRows = computed(() => selectedCampus.value === 'All'
-                    ? rows.value
-                    : rows.value.filter(row => row.campus?.id === selectedCampus.value))
+                            <!-- Remarks modal -->
+                            <q-dialog v-model="showRemarks" persistent transition-show="scale" transition-hide="scale">
+                                {% include 'Accountant/remarks.html' %}
+                            </q-dialog>
 
-                // For the formatting of the money
-                const peso = val => `₱${Number(val ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
-                const dateFormat = (val) => val ? date.formatDate(val, 'MMMM D, YYYY hh:mm:ss A') : '';
-
-
-                const columns = [
-                    { name: 'row_num', label: 'Row', field: 'row_num', sortable: true, align: 'left' },
-                    { name: 'leader.last_name', label: 'Leader Name', field: row => `${row.leader?.first_name ?? ''} ${row.leader?.last_name ?? ''}`.trim(), sortable: true, align: 'left' },
-                    {
-                        name: 'date_time_arrived', label: 'Date and Time Arrived', field: 'date_time_arrived', align: 'right', sortable: true,
-                        format: dateFormat, sort: (a, b) => new Date(a).getTime() - new Date(b).getTime()
-                    },
-                    { name: 'campus', label: 'Campus', field: row => row.campus?.name ?? '', align: 'right', sortable: true },
-                    { name: 'subsidy_amount', label: 'Subsidy Amount (PhP)', field: 'subsidy_amount', align: 'right', sortable: true, format: peso },
-                    { name: 'amount_released', label: 'Amount Released (PhP)', field: 'amount_released', align: 'right', sortable: true, format: peso },
-                    { name: 'completed', label: 'Completed', field: 'completed', align: 'right', sortable: true },
-                    { name: 'voucher', label: 'Voucher', field: 'voucher', align: 'right', sortable: true },
-                    { name: 'actions', label: 'Actions', field: 'id', align: 'center' }
-                ]
+</div>
+</q-td>
 
 
 
-                async function fetchCashierData() {
-                    loading.value = true
-                    try {
-                        const response = await fetch(`{% url 'accounting' %}`, {
-                            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                        })
 
-                        if (response.status === 401 || response.status === 403) {
-                            showError('Session expired. Please login again.')
-                            window.location.href = '/login/'
-                            return
-                        }
+</template>
+</q-table>
+</q-page>
+</q-page-container>
 
-                        const contentType = response.headers.get('content-type')
-                        if (!contentType || !contentType.includes('application/json')) {
-                            console.error('Expected JSON but got:', contentType)
-                            showError('Server returned an unexpected response. Please refresh manually.')
-                            return
-                        }
+</q-layout>
+</div>
 
-                        const data = await response.json()
-                        if (data.status === 'success') {
-                            count.value = data.count
-                            rows.value = data.data
-                        }
-                    } catch (error) {
-                        console.error(error)
-                        showError('Failed to load data. Please check your connection.')
-                    } finally {
-                        loading.value = false
-                    }
-                }
+{{ campuses|json_script:"campuses-data" }}
+
+<!-- Add the following at the end of your body tag -->
+<script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/quasar@2.34.0/dist/quasar.umd.prod.js"></script>
+<script src="https://unpkg.com/vue-router@4"></script>
+
+<script>
+    const { useQuasar, date } = Quasar
+    const { ref, onMounted, computed } = Vue
+    const filter = ref('')
+
+    const app = Vue.createApp({
+        setup() {
+            const $q = useQuasar()
+
+            // For modals
+            const showDetail = ref(false)
+            const showRemarks = ref(false)
+            const selectedRow = ref({})
+            const remarks = ref('')
+            const remarksId = ref(null)
+            const loadingRemarks = ref(false)
+            const savingRemarks = ref(false)
+
+            // Remark roles: only the logged-in user's role can be edited
+            const currentUserRole = '{{ request.user.type }}'
+            const remarkRoles = [
+                { code: 'PTR', title: 'Pastor' },
+                { code: 'FI', title: 'Cashier' },
+                { code: 'ACNT', title: 'Accountant' },
+            ]
+            const canRemark = remarkRoles.some(r => r.code === currentUserRole)
+            const roleRemarks = ref({})
+            const roleDrafts = ref({ PTR: '', FI: '', ACNT: '' })
 
 
-                async function viewDetail(row) {
-                    const id = row.id
+            const startDate = ref('{{ form.start_date.value|default_if_none:"" }}')
+            const endDate = ref('{{ form.end_date.value|default_if_none:"" }}')
 
-                    const data = await fetch(`/accounting/${id}/details/`, {
-                        method: 'GET',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    }).then(response => {
-                        if (!response.ok) {
-                            throw new Error('Failed to fetch details')
-                        }
-                        return response.json()
-                    }).then(result => {
-                        if (result.status !== 'success') {
-                            throw new Error(result.message || 'Request failed')
-                        }
-                        console.log('Result', result)
-                        selectedRow.value = result.data
-                        showDetail.value = true
-                    }).catch(err => {
-                        $q.notify({ type: 'negative', message: err.message })
+
+            //For the tables
+            const rows = ref([])
+            const count = ref(0)
+            const loading = ref(false)
+            const pagination = ref({ sortBy: null, descending: false, page: 1, rowsPerPage: 10 })
+
+            // Campus filter: options come from every Campus record (passed in by AccountingView)
+            const selectedCampus = ref('All')
+            const campusOptions = [
+                { label: 'All', value: 'All' },
+                ...JSON.parse(document.getElementById('campuses-data').textContent)
+                    .map(c => ({ label: c.name, value: c.id }))
+            ]
+            const filteredRows = computed(() => selectedCampus.value === 'All'
+                ? rows.value
+                : rows.value.filter(row => row.campus?.id === selectedCampus.value))
+
+            // For the formatting of the money
+            const peso = val => `₱${Number(val ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+            const dateFormat = (val) => val ? date.formatDate(val, 'MMMM D, YYYY hh:mm:ss A') : '';
+
+
+            const columns = [
+                { name: 'row_num', label: 'Row', field: 'row_num', sortable: true, align: 'left' },
+                { name: 'leader.last_name', label: 'Leader Name', field: row => `${row.leader?.first_name ?? ''} ${row.leader?.last_name ?? ''}`.trim(), sortable: true, align: 'left' },
+                {
+                    name: 'date_time_arrived', label: 'Date and Time Arrived', field: 'date_time_arrived', align: 'right', sortable: true,
+                    format: dateFormat, sort: (a, b) => new Date(a).getTime() - new Date(b).getTime()
+                },
+                { name: 'campus', label: 'Campus', field: row => row.campus?.name ?? '', align: 'right', sortable: true },
+                { name: 'subsidy_amount', label: 'Subsidy Amount (PhP)', field: 'subsidy_amount', align: 'right', sortable: true, format: peso },
+                { name: 'amount_released', label: 'Amount Released (PhP)', field: 'amount_released', align: 'right', sortable: true, format: peso },
+                { name: 'completed', label: 'Completed', field: 'completed', align: 'right', sortable: true },
+                { name: 'voucher', label: 'Voucher', field: 'voucher', align: 'right', sortable: true },
+                { name: 'actions', label: 'Actions', field: 'id', align: 'center' }
+            ]
+
+
+
+            async function fetchCashierData() {
+                loading.value = true
+                try {
+                    const response = await fetch(`{% url 'accounting' %}`, {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
                     })
 
-                    showDetail.value = true
-                }
-
-                // Fetch the latest remarks for the targeted entry when the dialog opens
-                async function openRemarksModal(row) {
-                    selectedRow.value = row
-                    remarksId.value = row.id
-                    remarks.value = ''
-                    roleRemarks.value = {}
-                    roleDrafts.value = { PTR: '', FI: '', ACNT: '' }
-                    showRemarks.value = true
-                    loadingRemarks.value = true
-                    try {
-                        const response = await fetch(`/accounting/${row.id}/details/`, {
-                            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                        })
-                        const result = await response.json()
-                        if (!response.ok || result.status !== 'success') {
-                            throw new Error(result.message || 'Failed to fetch remarks')
-                        }
-                        remarks.value = result.data.remarks ?? ''
-                        roleRemarks.value = result.data.role_remarks ?? {}
-                        for (const r of remarkRoles) {
-                            roleDrafts.value[r.code] = roleRemarks.value[r.code]?.description ?? 'No remarks'
-                        }
-                    } catch (err) {
-                        showRemarks.value = false
-                        showError(err.message)
-                    } finally {
-                        loadingRemarks.value = false
-                    }
-                }
-
-                function getCsrfToken() {
-                    return document.querySelector('[name=csrfmiddlewaretoken]')?.value
-                        || decodeURIComponent((document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '')
-                }
-
-                async function saveRemarks() {
-                    savingRemarks.value = true
-                    try {
-                        const response = await fetch(`/remarks/${remarksId.value}/submit/`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
-                            body: JSON.stringify({ remarks: roleDrafts.value[currentUserRole] })
-                        })
-                        const result = await response.json()
-                        if (!response.ok || result.status !== 'success') throw new Error(result.message)
-                        // Reflect the saved remark, its time and its author right in the dialog
-                        roleRemarks.value = { ...roleRemarks.value, [result.role]: result.remark }
-                        roleDrafts.value[result.role] = result.remark.description
-                        $q.notify({ type: 'positive', message: 'Remark saved' })
-                    } catch (err) {
-                        showError('Failed to save remarks: ' + err.message)
-                    } finally {
-                        savingRemarks.value = false
-                    }
-                }
-
-                function parseDate(r) {
-                    return new Date(r.created_at).toISOString()
-                }
-
-                function showError(message) {
-                    $q.notify({ type: 'negative', message, position: 'top' })
-                }
-
-                onMounted(fetchCashierData)
-
-                // For the dialog / modal
-
-                const hasImages = computed(() => !!selectedRow.value?.images?.length)
-
-                // Adjust this to whatever your original status logic was
-                const amountReleased = computed(() => Number(selectedRow.value?.amount_released ?? 0))
-
-                const status = computed(() => {
-                    const d = selectedRow.value || {}
-                    if (d.rejected) {
-                        return { color: '#e53e3e', bg: '#fff5f5', text: 'REJECTED' }
-                    } else if (d.is_late) {
-                        return { color: '#718096', bg: '#f7fafc', text: 'LATE' }
-                    } else if (amountReleased.value > 0) {
-                        return { color: '#38a169', bg: '#f0fff4', text: 'APPROVED' }
-                    }
-                    return { color: '#d69e2e', bg: '#fffaf0', text: 'PENDING' }
-                })
-
-                const formattedSchedule = computed(() => {
-                    const d = selectedRow.value || {}
-                    const schedule = d.service_schedule
-                    if (!schedule) return ''
-
-                    const campusName = d.campus ? d.campus.name : 'N/A'
-                    const scheduleDay = schedule.day || ''
-
-                    let timeStr = schedule.time
-                    if (timeStr) {
-                        const [hours, minutes] = timeStr.split(':')
-                        let hour = parseInt(hours, 10)
-                        const ampm = hour >= 12 ? 'PM' : 'AM'
-                        hour = hour % 12 || 12
-                        timeStr = `${hour}:${minutes} ${ampm}`
+                    if (response.status === 401 || response.status === 403) {
+                        showError('Session expired. Please login again.')
+                        window.location.href = '/login/'
+                        return
                     }
 
-                    return `${campusName} | ${scheduleDay} ${timeStr ?? ''}`.trim()
-                })
+                    const contentType = response.headers.get('content-type')
+                    if (!contentType || !contentType.includes('application/json')) {
+                        console.error('Expected JSON but got:', contentType)
+                        showError('Server returned an unexpected response. Please refresh manually.')
+                        return
+                    }
 
-                const statusColor = computed(() => status.value.color)
-                const statusBg = computed(() => status.value.bg)
-                const statusText = computed(() => status.value.text)
-
-                const bigValueStyle = computed(() => ({
-                    fontSize: '1.6rem', fontWeight: 800, color: statusColor.value
-                }))
-
-                const formatDate = val => val ? date.formatDate(val, 'MMMM D, YYYY') : 'N/A'
-                const formatDateTime = val => val ? date.formatDate(val, 'MMMM D, YYYY hh:mm:ss A') : 'N/A'
-
-                const openImage = url => window.open(url, '_blank')
-
-                return {
-                    rows, columns, count, loading, pagination, fetchCashierData, startDate, endDate, filter,
-                    selectedCampus, campusOptions, filteredRows,
-                    showDetail,
-                    showRemarks,
-                    selectedRow,
-                    remarks, loadingRemarks, savingRemarks,
-                    currentUserRole, remarkRoles, canRemark, roleRemarks, roleDrafts,
-                    viewDetail,
-                    openRemarksModal,
-                    saveRemarks,
-                    formatDate, formatDateTime,
-                    hasImages, statusColor, statusBg, statusText, bigValueStyle, formattedSchedule, openImage
+                    const data = await response.json()
+                    if (data.status === 'success') {
+                        count.value = data.count
+                        rows.value = data.data
+                    }
+                } catch (error) {
+                    console.error(error)
+                    showError('Failed to load data. Please check your connection.')
+                } finally {
+                    loading.value = false
                 }
             }
-        })
 
-        app.use(Quasar, {
-            config: {},
-            plugins: { Notify: Quasar.Notify, }
-        })
 
-        app.config.compilerOptions.delimiters = ['[[', ']]']
-        app.mount('#q-app')
-    </script>
+            async function viewDetail(row) {
+                const id = row.id
+
+                const data = await fetch(`/accounting/${id}/details/`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                }).then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch details')
+                    }
+                    return response.json()
+                }).then(result => {
+                    if (result.status !== 'success') {
+                        throw new Error(result.message || 'Request failed')
+                    }
+                    console.log('Result', result)
+                    selectedRow.value = result.data
+                    showDetail.value = true
+                }).catch(err => {
+                    $q.notify({ type: 'negative', message: err.message })
+                })
+
+                showDetail.value = true
+            }
+
+            // Fetch the latest remarks for the targeted entry when the dialog opens
+            async function openRemarksModal(row) {
+                selectedRow.value = row
+                remarksId.value = row.id
+                remarks.value = ''
+                roleRemarks.value = {}
+                roleDrafts.value = { PTR: '', FI: '', ACNT: '' }
+                showRemarks.value = true
+                loadingRemarks.value = true
+                try {
+                    const response = await fetch(`/accounting/${row.id}/details/`, {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    })
+                    const result = await response.json()
+                    if (!response.ok || result.status !== 'success') {
+                        throw new Error(result.message || 'Failed to fetch remarks')
+                    }
+                    remarks.value = result.data.remarks ?? ''
+                    roleRemarks.value = result.data.role_remarks ?? {}
+                    for (const r of remarkRoles) {
+                        roleDrafts.value[r.code] = roleRemarks.value[r.code]?.description ?? 'No remarks'
+                    }
+                } catch (err) {
+                    showRemarks.value = false
+                    showError(err.message)
+                } finally {
+                    loadingRemarks.value = false
+                }
+            }
+
+            function getCsrfToken() {
+                return document.querySelector('[name=csrfmiddlewaretoken]')?.value
+                    || decodeURIComponent((document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '')
+            }
+
+            async function saveRemarks() {
+                savingRemarks.value = true
+                try {
+                    const response = await fetch(`/remarks/${remarksId.value}/submit/`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrfToken() },
+                        body: JSON.stringify({ remarks: roleDrafts.value[currentUserRole] })
+                    })
+                    const result = await response.json()
+                    if (!response.ok || result.status !== 'success') throw new Error(result.message)
+                    // Reflect the saved remark, its time and its author right in the dialog
+                    roleRemarks.value = { ...roleRemarks.value, [result.role]: result.remark }
+                    roleDrafts.value[result.role] = result.remark.description
+                    $q.notify({ type: 'positive', message: 'Remark saved' })
+                } catch (err) {
+                    showError('Failed to save remarks: ' + err.message)
+                } finally {
+                    savingRemarks.value = false
+                }
+            }
+
+            function parseDate(r) {
+                return new Date(r.created_at).toISOString()
+            }
+
+            function showError(message) {
+                $q.notify({ type: 'negative', message, position: 'top' })
+            }
+
+            onMounted(fetchCashierData)
+
+            // For the dialog / modal
+
+            const hasImages = computed(() => !!selectedRow.value?.images?.length)
+
+            // Adjust this to whatever your original status logic was
+            const amountReleased = computed(() => Number(selectedRow.value?.amount_released ?? 0))
+
+            const status = computed(() => {
+                const d = selectedRow.value || {}
+                if (d.rejected) {
+                    return { color: '#e53e3e', bg: '#fff5f5', text: 'REJECTED' }
+                } else if (d.is_late) {
+                    return { color: '#718096', bg: '#f7fafc', text: 'LATE' }
+                } else if (amountReleased.value > 0) {
+                    return { color: '#38a169', bg: '#f0fff4', text: 'APPROVED' }
+                }
+                return { color: '#d69e2e', bg: '#fffaf0', text: 'PENDING' }
+            })
+
+            const formattedSchedule = computed(() => {
+                const d = selectedRow.value || {}
+                const schedule = d.service_schedule
+                if (!schedule) return ''
+
+                const campusName = d.campus ? d.campus.name : 'N/A'
+                const scheduleDay = schedule.day || ''
+
+                let timeStr = schedule.time
+                if (timeStr) {
+                    const [hours, minutes] = timeStr.split(':')
+                    let hour = parseInt(hours, 10)
+                    const ampm = hour >= 12 ? 'PM' : 'AM'
+                    hour = hour % 12 || 12
+                    timeStr = `${hour}:${minutes} ${ampm}`
+                }
+
+                return `${campusName} | ${scheduleDay} ${timeStr ?? ''}`.trim()
+            })
+
+            const statusColor = computed(() => status.value.color)
+            const statusBg = computed(() => status.value.bg)
+            const statusText = computed(() => status.value.text)
+
+            const bigValueStyle = computed(() => ({
+                fontSize: '1.6rem', fontWeight: 800, color: statusColor.value
+            }))
+
+            const formatDate = val => val ? date.formatDate(val, 'MMMM D, YYYY') : 'N/A'
+            const formatDateTime = val => val ? date.formatDate(val, 'MMMM D, YYYY hh:mm:ss A') : 'N/A'
+
+            const openImage = url => window.open(url, '_blank')
+
+            return {
+                rows, columns, count, loading, pagination, fetchCashierData, startDate, endDate, filter,
+                selectedCampus, campusOptions, filteredRows,
+                showDetail,
+                showRemarks,
+                selectedRow,
+                remarks, loadingRemarks, savingRemarks,
+                currentUserRole, remarkRoles, canRemark, roleRemarks, roleDrafts,
+                viewDetail,
+                openRemarksModal,
+                saveRemarks,
+                formatDate, formatDateTime,
+                hasImages, statusColor, statusBg, statusText, bigValueStyle, formattedSchedule, openImage
+            }
+        }
+    })
+
+    app.use(Quasar, {
+        config: {},
+        plugins: { Notify: Quasar.Notify, }
+    })
+
+    app.config.compilerOptions.delimiters = ['[[', ']]']
+    app.mount('#q-app')
+</script>
 
 {% endblock %}

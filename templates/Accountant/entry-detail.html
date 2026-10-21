@@ -3,7 +3,7 @@
          :style="{ background: statusBg, borderLeft: '5px solid ' + statusColor }">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h5 :style="{ color: statusColor, margin: 0 }">Payment Summary</h5>
-            <q-badge :color="statusColor">[[ statusText ]]</q-badge>
+            <q-chip :color="statusColor">[[ statusText ]]</q-chip>
         </div>
         <div class="detail-grid">
             <div class="detail-item">
@@ -60,7 +60,8 @@
             </div>
             <div class="detail-item">
                 <span class="detail-label">Plate Number</span>
-                <span class="detail-value">[[ selectedRow.plate_num || 'N/A' ]]</span>
+                <span><q-chip color="green" >[[ selectedRow.plate_num || 'N/A' ]]</q-chip></span>
+                
             </div>
             <div class="detail-item">
                 <span class="detail-label">Remarks</span>

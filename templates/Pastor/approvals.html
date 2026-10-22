@@ -144,6 +144,11 @@
 
 
 
+        // Header Refresh button: reload with the current filters (an action would pass the click event as the campus id)
+        refresh() {
+            this.filterCargoData();
+        }
+
         filterCargoData() {
             const campus_data = $('#campuses').val();
             console.log(campus_data)
@@ -244,7 +249,9 @@
                                 <button class="btn btn-sm btn-info text-white" onclick="showDetails(${c.id})">
                                     <i class="bi bi-eye"></i> Details
                                 </button>
-                                
+                                <button class="btn btn-sm btn-outline-info" onclick="openRemarksModal(${c.id})">
+                                    <i class="bi bi-chat-left-text"></i> Remarks
+                                </button>
                             </div>
                         </td>
                         <td>
@@ -280,6 +287,8 @@
     }
     Stimulus.register("cashier-table", CashierTableController);
 </script>
+
+{% include 'remarks_modal.html' %}
 
 <script>
     let pendingApprovalId = null;

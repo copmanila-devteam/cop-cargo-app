@@ -367,7 +367,7 @@
             {{ request.user.campus.name}}
             <div class="header-actions">
                 <div id="header-selections">
-                    <button class="btn btn-outline-primary" data-action="click->cashier-table#loadCashiers">
+                    <button class="btn btn-outline-primary" data-action="click->cashier-table#refresh">
                         <i class="bi bi-arrow-clockwise"></i> Refresh
                     </button>
                     <a data-cashier-table-target="btntripapprovals" href="{% url 'approvals' %}" class="btn btn-outline-success">Trip Approvals</a>

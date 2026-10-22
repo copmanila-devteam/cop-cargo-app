@@ -38,6 +38,9 @@ import openpyxl
 import secrets
 from .remarks_views import get_role_remarks
 from .utils import schedules_for_campus, event_for_campus, event_day_codes, days_until, WEEKDAY_CODES
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 
@@ -54,6 +57,7 @@ def page_500_view(request):
 
 
 
+@login_required
 def get_schedules(request):
     try:
         campus_id = int(request.GET.get('campus_id'))
@@ -1615,12 +1619,10 @@ class PastorApprovals(LoginRequiredMixin, View):
             
             return JsonResponse(response_data)
             
-        except Exception as e:
-            import traceback
-            return JsonResponse({
-                'error': str(e),
-                'detail': traceback.format_exc()
-            }, status=500)
+        except Exception:
+            # Full traceback goes to the server log, not to the browser
+            logger.exception('PastorApprovals list failed')
+            return JsonResponse({'error': 'Something went wrong loading the approvals.'}, status=500)
 
 
 def generate_voucher(length=7):
@@ -1739,6 +1741,10 @@ def cashier_attendees(request, cashier_id):
     """API endpoint to get attendees for a specific cashier"""
     try:
         cashier = get_object_or_404(Cashier, id=cashier_id)
+
+        # Passenger names/contacts: staff roles, or the leader who made this booking
+        if request.user.type not in ['PTR', 'FI', 'ACNT'] and cashier.leader_id != request.user.id:
+            return JsonResponse({'error': 'Not found.'}, status=404)
 
         # Get all attendees for this cashier
         attendees = cashier.users.all()
@@ -2111,7 +2117,11 @@ class AccountApproval(LoginRequiredMixin,TemplateView):
 
 def leaders_api_list(request):
 
-    """API endpoint to get list of cashiers as JSON"""
+    """API endpoint to get the pending leader accounts as JSON"""
+
+    # Leader names and emails: only the pastor approving accounts needs these
+    if request.user.type != 'PTR':
+        return JsonResponse({'error': 'Only pastors can view leader accounts.'}, status=403)
 
     try:
 
@@ -2189,17 +2199,12 @@ def leaders_api_list(request):
 
         
 
-    except Exception as e:
+    except Exception:
 
-        import traceback
+        # Full traceback goes to the server log, not to the browser
+        logger.exception('leaders_api_list failed')
 
-        return JsonResponse({
-
-            'error': str(e),
-
-            'detail': traceback.format_exc()
-
-        }, status=500)
+        return JsonResponse({'error': 'Something went wrong loading the leader accounts.'}, status=500)
 
 @login_required
 @require_POST

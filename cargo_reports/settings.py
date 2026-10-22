@@ -62,6 +62,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'cashier.middleware.HideJsonFromBrowserMiddleware',
 ]
 
 ROOT_URLCONF = 'cargo_reports.urls'

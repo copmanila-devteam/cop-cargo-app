@@ -110,8 +110,11 @@ class CashierEntryForm(forms.ModelForm):
     vehicle = forms.ModelChoiceField(
         required=True,
         empty_label='Select Vehicle',
-        label="Vehicle Type*",
-        queryset=Vehicle.objects.all(),
+        label="Vehicle Type",
+        # Hide vehicles with a blank name (they showed up as an empty option)
+        queryset=Vehicle.objects.exclude(name__regex=r'^\s*$').annotate(
+            lower_name=Lower('name')
+        ).order_by('lower_name'),
         widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_vehicle'})
     )
 

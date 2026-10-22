@@ -28,7 +28,7 @@
         <select id="campuses" name="campuses" data-action="change->cashier-table#filterCargoData">
             <option value="All">All</option>
         </select>
-        <!-- <button class="btn btn-success" data-action="click->cashier-table#filterCargoData"  type="submit">Filter</button> -->
+      
     </form>
 
     <table id="cashierTable" class="table table-hover w-100" style="display:none;">
@@ -134,9 +134,8 @@
 
 
         filterCargoData() {
-
             const campus_data = $('#campuses').val();
-            console.log(campus_data)
+          
 
             if (campus_data == 'All') {
 
@@ -158,7 +157,7 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    // this.loadCashiers(data['id'])
+                   
                     console.log(data['campus'])
                     if (data['status'] == 'success') {
 
@@ -184,7 +183,7 @@
         async loadCashiers(id) {
 
             try {
-                // const response = await fetch(`/api/list/${id}`);
+               
                 const url = id ? `/api/list/${id}` : '/api/list/';
                 const response = await fetch(url);
                 const data = await response.json();

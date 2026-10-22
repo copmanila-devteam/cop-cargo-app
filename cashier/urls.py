@@ -24,6 +24,10 @@ urlpatterns = [
     path('accounting/<int:id>/details/', AccountingView.as_view(), name='accounting-detail'),
 
     path('fetch_vouchers/', CashierView.as_view(), name='cashier-list'),
+    
+    # New url added. fetch_vouchers with campus_id params
+    # Added by: John Cedric Ureta
+    path('fetch_vouchers/<int:campus_id>', CashierView.as_view(), name='cashier-campus-list'),
 
     path('cashier/<int:id>/details/', CashierView.as_view(), name='cashier-detail'),
 

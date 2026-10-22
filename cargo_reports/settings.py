@@ -23,14 +23,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-_go-_4o+1mqa31_*)xxs2*1f=hi8t9om@j_mby8cojq#39jybp'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
-ALLOWED_HOSTS = ['cop-cargo.com','127.0.0.1','13.228.172.204']
+ALLOWED_HOSTS = ['cop-cargo.com','127.0.0.1','13.228.172.204', '0.0.0.0', 'localhost', 'cop-cargo.com', 'www.cop-cargo.com', 'cop-cargo.com:8000', 'cop-cargo.com:8080', 'cop-cargo.com:443', 'cop-cargo.com:80', 'cop-cargo.com:8443', 'cop-cargo.com:3000', 'cop-cargo.com:5000', 'cop-cargo.com:9000', 'cop-cargo.com:10000']
 
-SECURE_SSL_REDIRECT = True
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+# SECURE_SSL_REDIRECT = True
+# SESSION_COOKIE_SECURE = True
+# CSRF_COOKIE_SECURE = True
+# SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 INSTALLED_APPS = [
 
@@ -117,18 +117,15 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 
 
-
-
 LOGIN_URL = 'login-cargo'
 LOGOUT_REDIRECT_URL = 'login-cargo'
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
-STATIC_ROOT = '/opt/bitnami/apache/htdocs/cargo_reports/static'
+
+# STATIC_ROOT = '/opt/bitnami/apache/htdocs/cargo_reports/static' # uncomment this line when deploying to production
 STATIC_URL = 'static/'
-STATICFILES_DIRS = [BASE_DIR / "cashier/static",]
-
-
-
+# STATICFILES_DIRS = [BASE_DIR / "cashier/static",] # uncomment this line when deploying to production
+STATICFILES_DIRS = [BASE_DIR / "static",]
 
 MEDIA_URL = '/media/'
 

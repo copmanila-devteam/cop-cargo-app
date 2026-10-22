@@ -1,140 +1,132 @@
-https://we.tl/t-ChbCqMw7xKNVBezo
+# COP CarGo App
 
-# Cargo List Loader
+A Django web app for managing **CarGo** trips: leaders log the vehicles and passengers they bring to a campus service or event, pastors approve them, and finance/accounting release the transport subsidy based on a fare matrix.
 
-Loads the CarGo cargo-list Excel sheet into the fare tables of the `cashier` Django app, and includes an
-automated test that simulates a user picking Campus, City and Vehicle from dropdowns and checks the fare.
+## Roles
 
-## What is in this package
+Every user is an `Account.UserType` (email login, no username) with one of these types:
+
+| Code   | Role       | What they do |
+|--------|------------|--------------|
+| `LE`   | Leader     | Registers, then submits trip entries (vehicle, plate no., passengers, campus, service schedule, event) |
+| `PTR`  | Pastor     | Approves or rejects trip entries and new leader accounts for their campus |
+| `FI`   | Finance    | Cashier view: verifies vouchers, sets the released amount, adds remarks |
+| `ACNT` | Accountant | Accounting dashboard: reviews entries, exports to Excel, adds remarks |
+
+After login, users are sent to the landing page for their type. Those routes are stored in the `AuthRoute` table (default data in `backup/auth_routes.json`).
+
+## Main features
+
+- **Trip entry form** (`/trip/`). Picking a campus loads that campus's service schedules and its active events. The top event is selected by default.
+- **Events**, which can be tied to one campus or left blank to show for all campuses. They can have a date range or none (always active). "Special Event" entries are listed first.
+- **Fare matrix** (`Matrix`): price per city + vehicle + campus. You can import it from the CarGo cargo-list Excel sheet.
+- **Approvals** for pastors: trip entries (`/approvals_list/`) and leader accounts (`/leaders/approvals_list/`).
+- **Vouchers**: a 7-character code for each trip, checked by the cashier.
+- **Remarks**: a log of remarks per trip, for each role (`RemarksList`).
+- **Reports and Excel export** for each week (`/reports/`, `/accounting/`).
+- Photo uploads for each trip, with duplicate detection by image hash.
+
+## Project layout
 
 ```
-cargo_loader/
-├── README.md                          <- this file (keep it OUTSIDE your Django project)
-└── cashier/                           <- copy the contents of this folder into your cashier app
-    ├── cargo_import.py                   reads and interprets the sheet
-    ├── test.py                           automated test + JSON/Excel report
-    └── management/
-        ├── __init__.py
-        └── commands/
-            ├── __init__.py
-            └── load_cargo_data.py        the command: python manage.py load_cargo_data
+cargo_reports/        Django project (settings, root urls, wsgi)
+Account/              Custom user model (UserType), AuthRoute, login / registration
+cashier/              Main app: models, views, forms, APIs
+  cargo_import.py     Pure-Python parser for the cargo-list Excel sheet
+  utils.py            events_for_campus(): which events a campus should see
+  remarks_views.py    Remarks submission
+  management/commands/load_cargo_data.py
+  test.py             Cargo-list loader test (writes JSON/Excel reports)
+templates/            Templates by role: Accountant/, Pastor/, Authentication/, Registration/
+static/               CSS, JS, images, Bootstrap
+backup/               Seed data (e.g. auth_routes.json)
 ```
 
-Only the `cashier/` folder goes into your project. This README stays outside, for example in a `docs/` folder or next to the project.
+The frontend uses Django templates, Bootstrap and Stimulus controllers (`data-action="change->trip-form#..."`). The newer Accountant page (`templates/Accountant/index-2.html`) uses Vue and Quasar.
 
 ## Requirements
 
-- Django project with the `cashier` app and the models `City`, `Campus`, `Vehicle`, `SubsidyType`, `Matrix`
-  (each with a `name` field; `Matrix` has `city`, `campus`, `vehicle`, `peso_price`).
-- `SubsidyType` created and migrated (`python manage.py makemigrations && python manage.py migrate`).
-- A `Campus` row with id 1 (Main).
-- `pip install openpyxl`
+- Python 3.11+
+- PostgreSQL. The current settings use database `cop_cargo_app_2026` on `localhost:5432`, overridable with `DB_HOST` / `DB_PORT`. SQLite is still in `settings.py`, commented out.
+- Packages in `requirements.txt` (Django 5.2, openpyxl, Pillow, ...). You'll also need a PostgreSQL driver such as `psycopg[binary]`.
 
-## Install
-
-1. Copy everything inside `cargo_loader/cashier/` into your project's `cashier/` folder (next to `models.py`).
-   If `management/` or `management/commands/` already exist, add the files and keep your existing `__init__.py`.
-2. Put the Excel sheet at `cashier/cargo_list.xlsx` (or point `CARGO_XLSX` at it).
-
-## Run the loader
-
-Preview first. Nothing is saved:
+## Getting started (Windows)
 
 ```bash
-python manage.py load_cargo_data "cashier\cargo_list.xlsx" --dry-run
+python -m venv venv
 ```
-
-Load for real (same command without `--dry-run`):
 
 ```bash
-python manage.py load_cargo_data "cashier\cargo_list.xlsx"
+venv\Scripts\activate
 ```
 
-Options: `--app <label>` if your app is not called `cashier`. Campus id 1 is set by `CAMPUS_ID` at the top of
-`load_cargo_data.py`.
+```bash
+pip install -r requirements.txt
+```
 
-The command prints what it created, updated or left unchanged, every price conflict, and the rows that were
-filed under "Unidentified". It is safe to run again: it matches by name, never by id, so it does not duplicate rows.
+```bash
+python manage.py makemigrations Account cashier
+```
 
-## How the sheet is converted
+```bash
+python manage.py migrate
+```
 
-Only rows whose first column is `CARGO` are read.
+```bash
+python manage.py loaddata backup/auth_routes.json
+```
 
-| Sheet | Goes to | Rule |
-|---|---|---|
-| CAMPUS + DISTRICT | `City.name` | Built as `Campus (District)`, e.g. `Main (Pasay)`. Matches existing cities ignoring case, accents and spacing; creates missing ones. `SRC` becomes `Santa Rosa`. If DISTRICT is blank or literally "DISTRICT", the PICK UP LOCATION is used. |
-| Vehicle type | `Vehicle.name` | A `/` creates separate entries with the same data (`VAN/L300` gives Van and L300). `SUVS` becomes `SUV`. Blank gives `Unidentified`. New vehicles get `peso_price` 0. |
-| TOTAL COST PF RENT | `Matrix.peso_price` | If blank, REBATE AMOUNT / 0.5. If both are blank, 0.00. |
-| Cost equals rebate | `SubsidyType` "Student" | The `Student` row is created if missing. It is not linked to Matrix. |
-| (none) | `Matrix.campus` | Always Campus id 1 (Main). Campus rows are never created or changed. |
+```bash
+python manage.py createsuperuser
+```
 
-One Matrix row per city and vehicle.
+```bash
+python manage.py runserver
+```
 
-### Price conflicts
+Then open http://127.0.0.1:8000/login/. The admin site is at `/admin/`.
 
-When the sheet gives different prices for the same city and vehicle, the loader tries to separate them by
-**pick up location**: the rows that name a pick up move to their own city, `Campus (District - Pick up)`,
-for example `Tagaytay (Tagaytay - Brgy Asis, Mendez)`. Rows with no pick up stay on the base city. This is only
-done when it really removes the conflict.
+> `migrations/` is git-ignored, so run `makemigrations` on a fresh clone.
 
-If splitting cannot separate them (same pick up, or no pick up at all), the most common price wins (a 0.00 never
-beats a real price, a tie goes to the higher price) and the command prints it as an
-`UNRESOLVED price conflict`. Fix those in the sheet and run again.
+### Helper scripts
 
-Every split row is listed in the command output.
+These batch files sit next to `manage.py`. They share their settings in `_config.bat` and activate the venv on their own.
 
-## Run the automated test
+| Script | What it does |
+|--------|--------------|
+| `run_server.bat [addr:port]` | Warns about unapplied migrations, then runs the dev server (default `127.0.0.1:8000`) |
+| `dump_data.bat [app]` | Dumps data to `backups\data_<timestamp>.json` and `backups\latest.json` |
+| `load_data.bat [file.json]` | Loads a fixture (default `backups\latest.json`) |
+| `flush_except_users.bat` | Backs up the data, flushes the database, then reloads the users |
+
+## Importing the fare matrix
+
+This loads City, Vehicle, SubsidyType and Matrix rows from the cargo-list sheet. Only `CARGO` rows are read, and every row goes under Campus id 1 ("Main"):
+
+```bash
+python manage.py load_cargo_data cashier/cargo_list.xlsx --dry-run
+```
+
+Drop `--dry-run` to write the changes. You can run it more than once: matching is by name, and running it again changes nothing.
+
+Mapping rules (see `cashier/cargo_import.py`):
+- `CAMPUS (DISTRICT)` becomes the city name, e.g. `Main (Pasay)`. If the district is blank, the pick-up location is used.
+- `VAN/L300` becomes two vehicles with the same price.
+- If the cost is blank or 0, the price is `REBATE AMOUNT / 0.5`. If the rebate equals the cost, the row is a "Student" subsidy.
+
+## Tests
 
 ```bash
 python manage.py test cashier.test
 ```
 
-Django builds a temporary empty database, creates Campus id 1, loads the sheet with the command above, and then,
-for every city and vehicle combination in the sheet:
+The test loads the sheet into a throwaway test database and goes through Campus, City, Vehicle and fare for every combination. Reports are written to `cashier/test_reports/`. `CARGO_XLSX` and `CARGO_REPORT_DIR` override the paths.
 
-1. selects the Campus,
-2. checks the City appears in the City dropdown,
-3. checks the Vehicle appears in the Vehicle dropdown for that city,
-4. checks the fare equals the expected price.
+## Deployment notes
 
-It also checks the whole table: campus on every row, no duplicates, row count, no Campus rows added,
-`Student` exists when needed, and that running the loader twice changes nothing.
+Production runs on Apache + mod_wsgi (Bitnami) at `cop-cargo.com`. Before deploying, in `cargo_reports/settings.py`:
 
-Your real database is never touched.
-
-### Reports
-
-Each run writes a timestamped JSON and Excel file to `cashier/test_reports/`
-(change with `CARGO_REPORT_DIR`). Columns: No, Test, Campus, City, Vehicle, Excel rows, Expected, Actual,
-Result (PASS/FAIL), Failed step, Remark. A failing row's remark gives the failed step and expected vs actual.
-
-### Settings (environment variables)
-
-| Variable | Default |
-|---|---|
-| `CARGO_XLSX` | `cashier/cargo_list.xlsx` |
-| `CARGO_REPORT_DIR` | `cashier/test_reports` |
-
-## Things to review after the first dry run
-
-- Rows that used the pick-up location because DISTRICT was blank (South and Kawit campuses).
-- Rows filed under `Unidentified` (no vehicle type, e.g. the North rows).
-- Price conflicts where the most common price was used.
-- New City rows you may want to rename or merge, e.g. `South (Salawag)`.
-
-## Troubleshooting
-
-| Message | Cause |
-|---|---|
-| `Campus with id 1 does not exist` | Create the Main campus, or change `CAMPUS_ID`. |
-| `No installed app with label ...` / `LookupError` | Wrong app label; pass `--app`. |
-| `Unknown command: 'load_cargo_data'` | The two `__init__.py` files in `management/` are missing. |
-| `ModuleNotFoundError: openpyxl` | `pip install openpyxl` |
-| Test: `Excel sheet not found` | Put the sheet at `cashier/cargo_list.xlsx` or set `CARGO_XLSX`. |
-
-## Notes
-
-- The dropdown steps in the test are simulated with database queries. If you want the test to call your real
-  view or API instead, that can be added.
-- Tested on Django 6.1 with SQLite in a throwaway project that mirrors your models; run the dry run and the test
-  in your own project before the real load.
+- set `DEBUG = False`
+- uncomment `SECURE_SSL_REDIRECT`, `SESSION_COOKIE_SECURE`, `CSRF_COOKIE_SECURE`, `SECURE_PROXY_SSL_HEADER`
+- uncomment `STATIC_ROOT` and the production `STATICFILES_DIRS`, then run `python manage.py collectstatic`
+- move `SECRET_KEY` and the database credentials into environment variables

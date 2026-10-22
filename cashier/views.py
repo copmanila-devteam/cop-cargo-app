@@ -736,16 +736,25 @@ class CashierView(LoginRequiredMixin, View):
 
 
     def get(self, request, id=None, *args, **kwargs):
-
+            
+            
         if id:
 
             return self.get_cashier_detail(request, id)
 
-        
 
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-
-            return self.get_cashier_list(request)
+            # Campus id added by John Cedric Ureta
+            campus_id = kwargs.get('campus_id')
+          
+            
+            # Filter by campus_id or get all cashier list conditon updated
+            # Updated by John Cedric Ureta
+            if campus_id:
+             
+                return self.get_cashier_list(request, campus_id) # Get cashier list by specific campus
+            else:
+                return self.get_cashier_list(request) # Get All cashier list 
 
         
 
@@ -864,28 +873,40 @@ class CashierView(LoginRequiredMixin, View):
 
 
 
-
-    def get_cashier_list(self, request):
+    def get_cashier_list(self, request, campus_id=0):
         try:
             user = self.request.user
             from django.db.models import Count
 
-            base_qs = (
-                Cashier.objects
-                .select_related(
-                    'leader', 'campus', 'subsidy_type', 'vehicle',
-                    'start_location', 'approved_by', 'service_schedule', 'event'
+            # If else Condtion updated by : John Cedric Ureta
+            if campus_id: # If campus id existget cashier by specific campus
+                
+                base_qs = (
+                                Cashier.objects
+                                .select_related(
+                                    'leader', 'campus', 'subsidy_type', 'vehicle',
+                                    'start_location', 'approved_by', 'service_schedule'
+                                )
+                                .prefetch_related('images')  # leader removed from here
+                                .annotate(image_count=Count('images'))
+                                .filter(approved_by__isnull=False)
+                                .order_by('-time_arrived')
+                            )
+                base_qs = base_qs.filter(campus__id=campus_id) # ORM Filter added to filter campus id
+            else: # If campus id doesnt exist as params get cashier list by all
+                base_qs = (
+                    Cashier.objects
+                    .select_related(
+                        'leader', 'campus', 'subsidy_type', 'vehicle',
+                        'start_location', 'approved_by', 'service_schedule'
+                    )
+                    .prefetch_related('images')  # leader removed from here
+                    .annotate(image_count=Count('images'))
+                    .filter(approved_by__isnull=False)
+                    .order_by('-time_arrived')
                 )
-                .prefetch_related('images')  # leader removed from here
-                .annotate(image_count=Count('images'))
-                .filter(approved_by__isnull=False)
-                .order_by('-time_arrived')
-            )
 
-            if user.campus.name != "Main Campus":
-                base_qs = base_qs.filter(campus=user.campus)
-
-            base_qs = filter_by_service_type(base_qs, request)
+               
 
             # Evaluate queryset once
             cashiers = list(base_qs)

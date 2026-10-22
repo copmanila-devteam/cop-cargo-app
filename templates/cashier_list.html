@@ -22,7 +22,12 @@
             static targets = ["table", "loading", "error", "count", "modal", "detailContent"]
 
             connect() {
-                this.fetchCashierData();
+         
+              /**
+               Call getCampuses() on connect() to run automatically every first load of the whole page
+               Added by: John Cedric Ureta
+               **/
+                this.getCampuses();
                 
                 this.tableTarget.addEventListener('click', (e) => {
                     const btn = e.target.closest('.view-detail-btn');
@@ -33,10 +38,74 @@
                 });
             }
 
-           async fetchCashierData() {
+
+            /**
+             Add getCampuses() function to get campuses for campus dropdown
+            Added by: John Cedric Ureta
+            **/
+            async getCampuses() {
+                try {
+                    const response = await fetch('/api/getcampuses/');
+                    const data = await response.json();
+
+                    if (response.ok) {
+                    
+                        console.log(data['campus'])
+                        if (data['status'] == 'success') {
+
+                            $('#campuses').append(`<option selected value="${data['id']}">${data['campus']}</option>`)
+                            console.log(data['id'])
+                            this.fetchCashierData(data['id']);
+
+                        }
+
+                    }
+
+                }
+                catch (error) {
+                    console.error("Fetch error:", error);
+                    alert("Network error. Please check your connection.");
+
+                }
+            }
+
+
+             /**
+            Add filterCargobyCampus() function to filter cashier table by specific campus or All campus
+            Added by: John Cedric Ureta
+            **/
+            filterCargobyCampus() {
+                const campus_data = $('#campuses').val();
+               
+            
+              
+                if (campus_data == 'All') {
+
+                    this.fetchCashierData();
+
+                }
+                else {
+                    this.fetchCashierData(campus_data)
+
+                }
+
+
+            }
+
+
+            /**
+            Add fetchCashierData() function to get cashier cargo trip by campus id or by All campus. 
+            Added new parameter as campus_id
+            Added by: John Cedric Ureta
+            **/
+           async fetchCashierData(campus_id) {
             this.showLoading();
+
+           
+            const url = campus_id ? `/fetch_vouchers/${campus_id}` : '/fetch_vouchers/';  //Line updated if campus_id exists url with parameters will used. Else /fetch_vouchers/
+        
             try {
-                const response = await fetch('/fetch_vouchers/', {
+                const response = await fetch(url, {
                     headers: { 'X-Requested-With': 'XMLHttpRequest' }
                 });
 
@@ -380,7 +449,9 @@
             }
 
             refresh() {
-                this.fetchCashierData()
+                // refresh() is now getting by filterCargo Campus
+                
+                this.filterCargobyCampus() // Line updated by John Cedric Ureta
             }
         })
 
@@ -937,18 +1008,32 @@
         <div data-cashier-target="error" class="error hidden"></div>
 
         <div class="table-wrapper">
-            <form class="d-flex align-items-end gap-3 mb-3" method="POST" action="{% url 'cashier' %}">
+            <form class="align-items-end gap-3 mb-3" method="POST" action="{% url 'cashier' %}">
                 {% csrf_token %}
-                <div>
+                <div class="row">
+                    <div class="col-md-6 col-sm-12 my-3 mx-auto">
                     {{ form.start_date.label_tag }}
                     {{ form.start_date }}
                 </div>
-                <div>
+                <div class="col-md-6 col-sm-12 my-3 mx-auto">
                     {{ form.end_date.label_tag }}
                     {{ form.end_date }}
                 </div>
-                <button type="submit" class="btn btn-outline-success">Export</button>
+                <button type="submit" class="btn btn-success col-md-6 col-sm-12 mx-auto">Export</button>
+                </div>
             </form>
+              <!--  Start of updated code
+              Added by: John Cedric Ureta  
+              Form dropdown campus filter
+              -->
+                <form class="align-items-end gap-3 mb-3 form-group">
+                    <label for="campus">Filter Campus:</label>
+                    <select id="campuses" class="form-control" name="campuses" data-action="change->cashier#filterCargobyCampus"> 
+                        <option value="All">All</option>
+                    </select>
+            
+                </form>
+            <!-- End of updated code -->
             <table data-cashier-target="table" class="display responsive nowrap" style="width:100%"></table>
         </div>
 

@@ -25,6 +25,10 @@ urlpatterns = [
 
     path('fetch_vouchers/', CashierView.as_view(), name='cashier-list'),
 
+    # New url added. fetch_vouchers with campus_id params
+    # Added by: John Cedric Ureta
+    path('fetch_vouchers/<int:campus_id>', CashierView.as_view(), name='cashier-campus-list'),
+
     path('cashier/<int:id>/details/', CashierView.as_view(), name='cashier-detail'),
 
     path('update_remarks/<int:pk>/', views.update_remarks, name='update-remarks'),

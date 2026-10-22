@@ -86,6 +86,11 @@
             }
 
 
+            // Header Refresh button: reload the selected week (an action would pass the click event as the week)
+            refresh() {
+                this.getWeekandMonth();
+            }
+
             async getWeekandMonth(){
                 const week = $(this.weekTarget).val();
                

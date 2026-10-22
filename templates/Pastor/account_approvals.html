@@ -118,7 +118,10 @@
                 $(this.btnaccountapprovalsTarget).addClass("btn btn-success")
             }
 
-            
+            // Header Refresh button
+            refresh() {
+                this.loadCashiers();
+            }
 
             async loadCashiers() {
                 try {

@@ -37,7 +37,7 @@ from openpyxl.worksheet.table import Table, TableStyleInfo
 import openpyxl
 import secrets
 from .remarks_views import get_role_remarks
-from .utils import schedules_for_campus, event_for_campus, event_day_codes, days_until
+from .utils import schedules_for_campus, event_for_campus, event_day_codes, days_until, WEEKDAY_CODES
 
 
 
@@ -361,7 +361,15 @@ class CargoView(LoginRequiredMixin, TemplateView):
                 error_msg = 'Please upload at least one photo or receipt.'
                 if is_ajax: return JsonResponse({'status': 'error', 'message': error_msg}, status=400)
                 messages.error(request, error_msg)
-                
+
+            # The booking is dated today and the 15-minute rule is checked against today,
+            # so the schedule must be today's, e.g. a Friday service can't be booked on Sunday
+            elif form.cleaned_data['service_schedule'].days != WEEKDAY_CODES[date.today().weekday()]:
+                schedule = form.cleaned_data['service_schedule']
+                error_msg = f"The {schedule.get_days_display()} {schedule.time.strftime('%I:%M %p')} schedule can only be booked on {schedule.get_days_display()}. Please pick one of today's schedules."
+                if is_ajax: return JsonResponse({'status': 'error', 'message': error_msg}, status=400)
+                messages.error(request, error_msg)
+
             else:
                 try:
                     with transaction.atomic():
@@ -569,9 +577,13 @@ class VoucherView(LoginRequiredMixin, TemplateView):
             return render(request, self.template_name)
 
 
+@login_required
 @require_POST
 
 def reject_cashier(request, id):
+
+    if request.user.type != 'PTR':
+        return JsonResponse({'success': False, 'message': 'Only pastors can reject bookings.'}, status=403)
 
     try:
 
@@ -654,6 +666,10 @@ def remove_passenger(request, index):
 @require_POST
 
 def verify_voucher(request, cashier_id):
+
+    # Release is done at the cashier (Finance) or by the Accountant, never by the booking leader
+    if request.user.type not in ['FI', 'ACNT']:
+        return JsonResponse({'status': 'error', 'message': 'Only the cashier can release a voucher.'}, status=403)
 
     try:
 
@@ -1637,6 +1653,9 @@ def generate_voucher(length=7):
 
 def approve_cashier(request, cashier_id):
 
+    if request.user.type != 'PTR':
+        return JsonResponse({'error': 'Only pastors can approve bookings.'}, status=403)
+
     try:
 
 
@@ -1720,7 +1739,7 @@ def cashier_attendees(request, cashier_id):
     """API endpoint to get attendees for a specific cashier"""
     try:
         cashier = get_object_or_404(Cashier, id=cashier_id)
-        
+
         # Get all attendees for this cashier
         attendees = cashier.users.all()
         
@@ -2185,10 +2204,13 @@ def leaders_api_list(request):
 @login_required
 @require_POST
 def approve_leader(request, leader_id):
-    """Approve a cashier entry"""
+    """Approve a leader account"""
+    if request.user.type != 'PTR':
+        return JsonResponse({'error': 'Only pastors can approve leader accounts.'}, status=403)
     try:
-        leader_account = UserType.objects.get(id=leader_id)
-        
+        # Only leader accounts can be approved here, not other pastors/finance/accountants
+        leader_account = UserType.objects.get(id=leader_id, type='LE')
+
         leader_account.is_active_leader = True
         leader_account.date_approved = timezone.now()
         leader_account.save()
@@ -2199,21 +2221,27 @@ def approve_leader(request, leader_id):
             'message': 'Cashier entry approved successfully.'
         })
         
+    except UserType.DoesNotExist:
+        return JsonResponse({'error': 'Leader account not found.'}, status=404)
     except Exception as e:
         return JsonResponse({
             'error': str(e)
         }, status=500)
 
 
+@login_required
 @require_POST
 def reject_leader(request, id):
+    if request.user.type != 'PTR':
+        return JsonResponse({'success': False, 'message': 'Only pastors can reject leader accounts.'}, status=403)
     try:
-        account = UserType.objects.get(id=id)
+        # Only leader accounts can be deactivated here
+        account = UserType.objects.get(id=id, type='LE')
         account.is_active = False
         account.is_active_leader = False
         account.save()
         return JsonResponse({'success': True, 'message': 'Request rejected successfully'})
-    except Cashier.DoesNotExist:
+    except UserType.DoesNotExist:
         return JsonResponse({'success': False, 'message': 'Record not found'}, status=404)
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)}, status=500)

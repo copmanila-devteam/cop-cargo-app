@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 
 from .models import Cashier, RemarksList
 
@@ -32,6 +32,23 @@ def get_role_remarks(cashier):
         if remark.user.type in result:
             result[remark.user.type] = serialize_remark(remark)
     return result
+
+
+@login_required
+@require_GET
+def get_remarks(request, pk):
+    """System remarks plus the latest remark per role for Cashier entry `pk`."""
+    if request.user.type not in REMARK_ROLES:
+        return JsonResponse({'status': 'error', 'message': 'You are not allowed to view remarks'}, status=403)
+
+    cashier = get_object_or_404(Cashier, pk=pk)
+    return JsonResponse({
+        'status': 'success',
+        'data': {
+            'remarks': cashier.remarks,
+            'role_remarks': get_role_remarks(cashier),
+        },
+    })
 
 
 @login_required

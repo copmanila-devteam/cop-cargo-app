@@ -78,7 +78,6 @@
                 
                 const subsidyAmount = parseFloat(entry.subsidy_amount) || 0;
                 const amountReleased = parseFloat(entry.amount_released) || 0;
-                const remarks = entry.remarks || "";
 
                 const formatPHP = (num) => `₱${(parseFloat(num) || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
                 const voucher_code = entry.voucher;
@@ -114,7 +113,7 @@
                         <button class="view-detail-btn py-1 px-2" data-action="click->cashier#viewDetail" data-id="${entry.id}">
                             <i class="fas fa-eye"></i> View
                         </button>
-                        <button class="btn btn-sm btn-outline-info" data-id="${entry.id}" data-remarks='${JSON.stringify(remarks)}' onclick="window.openRemarksModal(this.dataset.id, JSON.parse(this.dataset.remarks))">
+                        <button class="btn btn-sm btn-outline-info" onclick="window.openRemarksModal(${entry.id})">
                             <i class="fas fa-comment"></i> Remarks
                         </button>
                         <button class="btn btn-sm btn-outline-success" 
@@ -385,13 +384,6 @@
             }
         })
 
-        // ── Remarks Modal ──────────────────────────────────────────────
-        window.openRemarksModal = (id, currentRemarks) => {
-            document.getElementById('remarks_id').value = id;
-            document.getElementById('remarks_text').value = currentRemarks;
-            document.getElementById('remarksModal').classList.add('show');
-        };
-
         // ── Amount Modal ───────────────────────────────────────────────
         window.openAmountModal = (id, currentAmount, suggested) => {
             document.getElementById('amount_id').value = id;
@@ -410,34 +402,6 @@
             document.getElementById('voucher_success_msg').classList.add('hidden');
             document.getElementById('voucherModal').classList.add('show');
             setTimeout(() => document.getElementById('voucher_code_input').focus(), 100);
-        };
-
-        window.saveRemarks = async () => {
-            const id = document.getElementById('remarks_id').value;
-            const remarks = document.getElementById('remarks_text').value;
-            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-
-            try {
-                const response = await fetch(`/update_remarks/${id}/`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrfToken
-                    },
-                    body: JSON.stringify({ remarks: remarks })
-                });
-
-                const data = await response.json();
-                if (data.status === 'success') {
-                    closeSpecificModal('remarksModal');
-                    const controller = document.querySelector('[data-controller="cashier"]');
-                    window.Stimulus.getControllerForElementAndIdentifier(controller, "cashier").refresh();
-                } else {
-                    alert("Error: " + data.message);
-                }
-            } catch (error) {
-                console.error("Failed to save remarks:", error);
-            }
         };
 
         window.saveAmount = async () => {
@@ -896,19 +860,7 @@
 </head>
 <body>
     <!-- Remarks Modal -->
-    <div id="remarksModal" class="modal">
-        <div class="modal-content" style="max-width: 500px;">
-            <h3>Update Remarks</h3>
-            <div class="p-4">
-                <input type="hidden" id="remarks_id">
-                <textarea id="remarks_text" class="form-control" rows="4"></textarea>
-                <div class="mt-3 d-flex gap-2">
-                    <button class="view-detail-btn" onclick="saveRemarks()">Save Changes</button>
-                    <button class="logout-btn" onclick="closeSpecificModal('remarksModal')">Cancel</button>
-                </div>
-            </div>
-        </div>
-    </div>
+    {% include 'remarks_modal.html' %}
 
     <!-- Amount Modal -->
     <div id="amountModal" class="modal">

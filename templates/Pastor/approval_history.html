@@ -146,6 +146,9 @@
                                 <button class="btn btn-sm btn-info text-white" onclick="showDetails(${c.id})">
                                     <i class="bi bi-eye"></i>Details
                                 </button>
+                                <button class="btn btn-sm btn-outline-info" onclick="openRemarksModal(${c.id})">
+                                    <i class="bi bi-chat-left-text"></i> Remarks
+                                </button>
                             </div>
                         </td>
                     </tr>
@@ -171,6 +174,8 @@
         }
         Stimulus.register("cashier-table", CashierTableController);
     </script>
+
+    {% include 'remarks_modal.html' %}
 
     <script>
         let pendingApprovalId = null;

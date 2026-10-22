@@ -1,0 +1,252 @@
+<!--
+    Shared Remarks modal for the Stimulus pages (Pastor, Cashier).
+    Mirrors Accountant/remarks.html: read-only system remarks plus one remark per
+    role, where only the logged-in user's role is editable.
+    Include it after the page's own Stimulus module (it registers on window.Stimulus),
+    then open it from anywhere with window.openRemarksModal(cashierId).
+-->
+<div class="remarks-modal" data-controller="remarks"
+     data-remarks-role-value="{{ request.user.type }}"
+     data-remarks-csrf-value="{{ csrf_token }}"
+     data-action="remarks:open@window->remarks#open click->remarks#backdropClose keydown.esc@window->remarks#close">
+    <div class="remarks-dialog" role="dialog" aria-modal="true" aria-labelledby="remarksTitle">
+        <div class="remarks-header">
+            <h5 id="remarksTitle">Remarks</h5>
+        </div>
+
+        <div class="remarks-body">
+            <div data-remarks-target="loading" class="remarks-loading remarks-hidden">Loading remarks...</div>
+
+            <div class="remarks-section">
+                <h6 class="remarks-label">System Generated Remarks</h6>
+                <textarea data-remarks-target="system" class="form-control" rows="2" readonly></textarea>
+            </div>
+
+            <!-- One section per role, built from roles below -->
+            <div data-remarks-target="roles"></div>
+        </div>
+
+        <div class="remarks-footer">
+            <button type="button" class="remarks-btn remarks-btn-close" data-action="remarks#close" data-remarks-target="closeBtn">Close</button>
+            <button type="button" class="remarks-btn remarks-btn-submit remarks-hidden" data-action="remarks#save" data-remarks-target="submitBtn">Submit</button>
+        </div>
+    </div>
+</div>
+
+<div class="remarks-toast remarks-hidden" data-remarks-toast></div>
+
+<style>
+    .remarks-modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 20000;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+    }
+    .remarks-modal.remarks-show { display: flex; }
+    .remarks-dialog {
+        background: white;
+        border-radius: 12px;
+        width: 100%;
+        max-width: 640px;
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        overflow: hidden;
+    }
+    .remarks-header {
+        padding: 16px 20px;
+        background: linear-gradient(135deg, #38a169 0%, #276749 100%);
+        color: white;
+    }
+    .remarks-header h5 { margin: 0; font-size: 1.25rem; font-weight: 700; color: white; }
+    .remarks-body { padding: 8px 20px; overflow-y: auto; }
+    .remarks-section { padding: 12px 0; }
+    .remarks-label {
+        font-size: 12px; color: #718096; font-weight: 600;
+        text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;
+    }
+    .remarks-role-title { font-size: 15px; color: #2d3748; font-weight: 700; margin-bottom: 2px; }
+    .remarks-meta { display: block; font-size: 12px; color: #718096; margin-bottom: 6px; }
+    .remarks-body textarea { resize: vertical; }
+    .remarks-body textarea[readonly] { background: #edf2f7; }
+    .remarks-counter { font-size: 11px; color: #a0aec0; text-align: right; }
+    .remarks-loading { padding: 12px 0; text-align: center; color: #667eea; font-weight: 600; }
+    .remarks-footer {
+        display: flex; justify-content: flex-end; gap: 8px;
+        padding: 12px 20px; border-top: 1px solid #e2e8f0;
+    }
+    .remarks-btn {
+        border: none; border-radius: 6px; padding: 8px 18px;
+        font-size: 14px; font-weight: 600; cursor: pointer;
+    }
+    .remarks-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .remarks-btn-close { background: transparent; color: #4a5568; }
+    .remarks-btn-close:hover:not(:disabled) { background: #edf2f7; }
+    .remarks-btn-submit { background: #38a169; color: white; }
+    .remarks-btn-submit:hover:not(:disabled) { background: #276749; }
+    .remarks-toast {
+        position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+        z-index: 20001; padding: 12px 20px; border-radius: 8px;
+        color: white; font-weight: 600; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        max-width: calc(100% - 32px);
+    }
+    .remarks-toast-positive { background: #38a169; }
+    .remarks-toast-negative { background: #e53e3e; }
+    .remarks-hidden { display: none !important; }
+</style>
+
+<script type="module">
+    import { Controller } from "https://unpkg.com/@hotwired/stimulus/dist/stimulus.js"
+
+    // Remark roles: only the logged-in user's role can be edited
+    const REMARK_ROLES = [
+        { code: 'PTR', title: 'Pastor' },
+        { code: 'FI', title: 'Cashier' },
+        { code: 'ACNT', title: 'Accountant' },
+    ]
+
+    window.openRemarksModal = (id) => {
+        window.dispatchEvent(new CustomEvent('remarks:open', { detail: { id } }))
+    }
+
+    window.Stimulus.register("remarks", class extends Controller {
+        static targets = ["loading", "system", "roles", "closeBtn", "submitBtn"]
+        static values = { role: String, csrf: String }
+
+        connect() {
+            this.cashierId = null
+            this.roleRemarks = {}
+            this.canRemark = REMARK_ROLES.some(r => r.code === this.roleValue)
+            this.submitBtnTarget.classList.toggle('remarks-hidden', !this.canRemark)
+        }
+
+        // Fetch the latest remarks for the targeted entry when the modal opens
+        async open(event) {
+            this.cashierId = event.detail.id
+            this.roleRemarks = {}
+            this.systemTarget.value = ''
+            this.renderRoles({})
+            this.element.classList.add('remarks-show')
+            this.setLoading(true)
+
+            try {
+                const response = await fetch(`/remarks/${this.cashierId}/`, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                const result = await response.json()
+                if (!response.ok || result.status !== 'success') {
+                    throw new Error(result.message || 'Failed to fetch remarks')
+                }
+                this.systemTarget.value = result.data.remarks ?? ''
+                this.roleRemarks = result.data.role_remarks ?? {}
+                this.renderRoles(this.roleRemarks)
+            } catch (err) {
+                this.close()
+                this.notify('negative', err.message)
+            } finally {
+                this.setLoading(false)
+            }
+        }
+
+        close() {
+            if (this.saving) return
+            this.element.classList.remove('remarks-show')
+        }
+
+        backdropClose(event) {
+            if (event.target === this.element) this.close()
+        }
+
+        async save() {
+            const draft = this.rolesTarget.querySelector(`textarea[data-role="${this.roleValue}"]`)
+            this.setSaving(true)
+            try {
+                const response = await fetch(`/remarks/${this.cashierId}/submit/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': this.csrfToken() },
+                    body: JSON.stringify({ remarks: draft ? draft.value : '' })
+                })
+                const result = await response.json()
+                if (!response.ok || result.status !== 'success') throw new Error(result.message)
+                this.roleRemarks = { ...this.roleRemarks, [result.role]: result.remark }
+                this.setSaving(false)
+                this.close()
+                this.notify('positive', `Remark has been successfully updated.`)
+            } catch (err) {
+                this.notify('negative', 'Failed to save remarks: ' + err.message)
+            } finally {
+                this.setSaving(false)
+            }
+        }
+
+        renderRoles(roleRemarks) {
+            this.rolesTarget.replaceChildren(...REMARK_ROLES.map(r => {
+                const remark = roleRemarks[r.code]
+                const editable = r.code === this.roleValue
+
+                const section = document.createElement('div')
+                section.className = 'remarks-section'
+
+                const title = document.createElement('h6')
+                title.className = 'remarks-role-title'
+                title.textContent = `${r.title}'s Remark`
+
+                const meta = document.createElement('small')
+                meta.className = 'remarks-meta'
+                meta.textContent = 'Last updated: ' + (remark
+                    ? `${this.formatDateTime(remark.timestamp)} by ${remark.user_name}`
+                    : 'N/A')
+
+                const textarea = document.createElement('textarea')
+                textarea.className = 'form-control'
+                textarea.rows = 3
+                textarea.maxLength = 300
+                textarea.dataset.role = r.code
+                textarea.readOnly = !editable
+                textarea.value = remark?.description ?? (editable ? '' : 'No remarks')
+                if (editable) textarea.placeholder = 'Write your remark (max 300 characters)'
+
+                section.append(title, meta, textarea)
+                return section
+            }))
+        }
+
+        setLoading(loading) {
+            this.loadingTarget.classList.toggle('remarks-hidden', !loading)
+            this.submitBtnTarget.disabled = loading
+            this.rolesTarget.querySelectorAll('textarea').forEach(t => t.disabled = loading)
+        }
+
+        setSaving(saving) {
+            this.saving = saving
+            this.submitBtnTarget.disabled = saving
+            this.closeBtnTarget.disabled = saving
+            this.submitBtnTarget.textContent = saving ? 'Saving...' : 'Submit'
+        }
+
+        csrfToken() {
+            return document.querySelector('[name=csrfmiddlewaretoken]')?.value || this.csrfValue
+        }
+
+        formatDateTime(value) {
+            if (!value) return 'N/A'
+            return new Date(value).toLocaleString('en-US', {
+                year: 'numeric', month: 'long', day: 'numeric',
+                hour: '2-digit', minute: '2-digit', second: '2-digit'
+            })
+        }
+
+        notify(type, message) {
+            const toast = document.querySelector('[data-remarks-toast]')
+            toast.textContent = message
+            toast.className = `remarks-toast remarks-toast-${type}`
+            clearTimeout(this.toastTimer)
+            this.toastTimer = setTimeout(() => toast.classList.add('remarks-hidden'), 3000)
+        }
+    })
+</script>

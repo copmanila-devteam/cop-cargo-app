@@ -76,7 +76,7 @@ class CashierEntryForm(forms.ModelForm):
 
     campus = forms.ModelChoiceField(
         required=True,
-        empty_label='Select COP campus',
+        empty_label='Select COP Campus',
         queryset=Campus.objects.annotate(
             priority=area_priority(campus_is),
             lower_name=Lower('name'),

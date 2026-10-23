@@ -249,7 +249,7 @@ class Cashier(models.Model):
     vehicle = models.ForeignKey(Vehicle, on_delete=models.SET_NULL, null=True, blank=True, related_name='cashier_entries')
 
     subsidy_type = models.ForeignKey(SubsidyType, on_delete=models.CASCADE, null=True, blank=True, related_name='subsidy_types')
-    capacity = models.IntegerField(validators=[MinValueValidator(0), MaxValueValidator(20)],default=0)
+    capacity = models.IntegerField(validators=[MinValueValidator(1)],default=0)
 
     plate_regex = RegexValidator(
 

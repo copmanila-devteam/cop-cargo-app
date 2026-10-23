@@ -122,6 +122,7 @@ class CashierEntryForm(forms.ModelForm):
 	required=True,
 	label="Capacity",
 	initial=0,
+	min_value=1,
 	widget=forms.NumberInput(attrs={'class':'form-control'})
     )
 
@@ -140,7 +141,6 @@ class CashierEntryForm(forms.ModelForm):
             'accept': 'image/*',
             'id': 'id_photos',
             'required':'required',
-            'data-action': 'change->trip-form#previewImages'
         })
     )
 

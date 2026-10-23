@@ -20,7 +20,7 @@ from django.db.models import Q, F
 
 from .models import Cashier, Attendees, Event, SubsidyType,Campus, Vehicle, ServiceSchedule, City
 
-
+from .utils import events_for_campus
 
 
 
@@ -43,6 +43,7 @@ class CashierEntryForm(forms.ModelForm):
         queryset=Event.objects.none(),
         required=True,
         label='Event / Service',
+        empty_label='Select Event or Service',
         widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_events'})
     )
 
@@ -59,8 +60,7 @@ class CashierEntryForm(forms.ModelForm):
         queryset=Campus.objects.all(),
         widget=forms.Select(attrs={
             'class': 'form-control', 
-            'id': 'id_campus',
-            'data-action': 'change->trip-form#filterSchedules',
+            'id': 'id_campus'
         })
     )
 
@@ -128,38 +128,28 @@ class CashierEntryForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-
         super().__init__(*args, **kwargs)
 
         # FIX: Remove Service Schedule among the list of Campus
         self.fields['campus'].queryset = Campus.objects.exclude(name='Special Event')
 
-        # Filters schedules based on campus during form validation
-        if 'campus' in self.data:
+        campus_id = None
+        if self.data.get('campus'):
             try:
                 campus_id = int(self.data.get('campus'))
-                self.fields['service_schedule'].queryset = ServiceSchedule.objects.filter(campus_id=campus_id)
-
             except (ValueError, TypeError):
-                self.fields['service_schedule'].queryset = ServiceSchedule.objects.none()
+                campus_id = None
 
-        # Adding this new line to specify the target Event against the system time
-        today = timezone.localdate()
+        if campus_id:
+            self.fields['service_schedule'].queryset = ServiceSchedule.objects.filter(campus_id=campus_id)
 
-        # Dropdown order: highest priority first, then soonest start
-        event_queryset = Event.objects.filter(start_date__lte=today, end_date__gte=today).order_by('priority', 'start_date')
-        self.fields['events'].queryset =  event_queryset
+            event_queryset = events_for_campus(campus_id)
+            self.fields['events'].queryset = event_queryset
 
-        print(f'Date today: {today}')
-
-        current_event = (
-            event_queryset
-            .filter(start_date__lte=today, end_date__gte=today)
-            .first()
-        )
-
-        if current_event:
-            self.fields['events'].initial = current_event.pk
+            current_event = event_queryset.first()
+            if current_event:
+                self.fields['events'].initial = current_event.pk
+            
 
 
 

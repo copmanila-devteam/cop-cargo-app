@@ -46,7 +46,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">{{ form.campus.label }}</label>
-                                <div data-action="change->trip-form#handleCampusChange">
+                                <div data-action="change->trip-form#handleCampusChange change->trip-form#filterEvents">
                                     {{ form.campus }}
                                 </div>
                             </div>
@@ -283,7 +283,17 @@
                 this.updateSubmitButton();
             }
 
-        
+            async filterEvents(event) {
+  const campusId = event.target.value
+  const select = this.element.querySelector('#id_events')
+
+  const response = await fetch(`/api/get-events/?campus_id=${campusId}`)
+  const { events } = await response.json()
+
+  select.innerHTML = ''
+  events.forEach(e => select.add(new Option(e.name, e.id)))
+  // First option is the top-priority event, so it ends up selected by default
+}
 
             async handleCampusChange(event) {
                 const campusId = event.target.value;
@@ -300,6 +310,9 @@
                 loadingIndicator?.classList.remove('d-none');
                 scheduleSelect.disabled = true;
 
+                /** Triggers the seletion of the Service Schedule
+                 *
+                 */
                 try {
                     const response = await fetch(`/api/get-schedules/?campus_id=${campusId}`);
                     const data = await response.json();
@@ -320,6 +333,9 @@
                     this.updatePriceDisplay();
                     this.updateSubmitButton();
                 }
+
+                
+
             }
 
     async handleSubmit(event) {

@@ -68,8 +68,6 @@ class CashierEntryForm(forms.ModelForm):
 
             'id': 'id_campus',
 
-            'data-action': 'change->trip-form#filterSchedules',
-
         })
 
     )

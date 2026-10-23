@@ -36,6 +36,7 @@ from openpyxl.worksheet.table import Table, TableStyleInfo
 import openpyxl
 import secrets
 from .remarks_views import get_role_remarks
+from .utils import events_for_campus
 
 
 
@@ -2124,12 +2125,6 @@ def leaders_api_list(request):
 
         }, status=500)
 
-    
-
-    
-
-
-
 @login_required
 @require_POST
 def approve_leader(request, leader_id):
@@ -2153,7 +2148,6 @@ def approve_leader(request, leader_id):
         }, status=500)
 
 
-
 @require_POST
 def reject_leader(request, id):
     try:
@@ -2168,7 +2162,6 @@ def reject_leader(request, id):
         return JsonResponse({'success': False, 'message': str(e)}, status=500)
     
 
-
 @login_required
 def getcampuses(request):
     try:
@@ -2176,3 +2169,14 @@ def getcampuses(request):
         return JsonResponse({'status':'success', 'campus':user.campus.name,'id': user.campus.id})
     except Exception as e:
         return JsonResponse({'status':'error', 'message':str(e)})
+
+# 20261020: To trigger the fetching of Events based on chosen campus
+@login_required
+def load_events(request):
+    try:
+        campus_id = int(request.GET.get('campus_id'))
+    except (TypeError, ValueError):
+        campus_id = None
+
+    events = [{'id': e.pk, 'name': str(e)} for e in events_for_campus(campus_id)]
+    return JsonResponse({'events': events})

@@ -51,6 +51,10 @@ urlpatterns = [
     path('api/list/', views.PastorApprovals.as_view(), name='cashier_api_list'),
     path('api/list/<int:id>', views.PastorApprovals.as_view(), name='cashier_api_list_specific_campus'),
     path('api/getcampuses/', views.getcampuses, name='get-campuses'),
+
+    # Add event fetching
+    path('api/get-events/', views.load_events, name='get-events'),
+
     path('reports/', ReportsView.as_view(), name='reports-trip'),
     path('reports/<str:week>', ReportsView.as_view(), name='reports-trip'),
 

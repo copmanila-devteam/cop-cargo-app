@@ -10,7 +10,7 @@
 {% block main %}
 
     <div class="container mt-4">
-        <form method="post" enctype="multipart/form-data" data-controller="trip-form" data-action="submit->trip-form#handleSubmit" action="{% url 'cashier_entry' %}">
+        <form method="post" enctype="multipart/form-data" data-controller="trip-form" data-trip-form-user-value="{{ request.user.pk }}" data-action="submit->trip-form#handleSubmit" action="{% url 'cashier_entry' %}">
             {% csrf_token %}
             
             <div class="row g-4">
@@ -162,9 +162,14 @@
                         </div>
 
                         <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top">
-                            <span class="small text-muted fw-semibold">
-                                <span data-passenger-form-target="selectedCount">0</span> selected
-                            </span>
+                            <div class="d-flex align-items-center gap-3">
+                                <span class="small text-muted fw-semibold">
+                                    <span data-passenger-form-target="selectedCount">0</span> selected
+                                </span>
+                                <button type="button" class="btn btn-link btn-sm p-0 fw-bold text-decoration-none" style="color: var(--emerald-700);" data-action="click->passenger-form#toggleSelectAll" data-passenger-form-target="selectAllBtn">
+                                    Select All
+                                </button>
+                            </div>
                             <button type="button" class="btn btn-emerald" data-action="click->passenger-form#addSelectedAttendees">
                                 Add Selected
                             </button>
@@ -225,6 +230,32 @@
         import { Application, Controller } from "https://cdn.jsdelivr.net/npm/@hotwired/stimulus@3.2.2/dist/stimulus.min.js";
         window.Stimulus = Application.start();
 
+        // --- Draft storage ---
+        // Unsubmitted entries are kept in IndexedDB (localStorage can't hold photo files)
+        // so nothing is lost on refresh or an expired session. Cleared on submit and on logout (see base.html).
+        const DRAFT_DB = 'cop-cargo-drafts';
+        const DRAFT_STORE = 'drafts';
+        const DRAFT_FIELDS = ['start_location', 'campus', 'service_schedule', 'subsidy_type', 'plate_num', 'vehicle', 'capacity'];
+
+        function draftRequest(mode, action) {
+            return new Promise((resolve, reject) => {
+                const open = indexedDB.open(DRAFT_DB, 1);
+                open.onupgradeneeded = () => open.result.createObjectStore(DRAFT_STORE);
+                open.onerror = () => reject(open.error);
+                open.onsuccess = () => {
+                    const db = open.result;
+                    const tx = db.transaction(DRAFT_STORE, mode);
+                    const req = action(tx.objectStore(DRAFT_STORE));
+                    tx.oncomplete = () => { db.close(); resolve(req.result); };
+                    tx.onerror = () => { db.close(); reject(tx.error); };
+                };
+            });
+        }
+
+        const getDraft = (key) => draftRequest('readonly', store => store.get(key));
+        const putDraft = (key, draft) => draftRequest('readwrite', store => store.put(draft, key));
+        const deleteDraft = (key) => draftRequest('readwrite', store => store.delete(key));
+
         // --- Notification Controller ---
         Stimulus.register("notification", class extends Controller {
             show(message, type = "success") {
@@ -268,19 +299,98 @@
       
         Stimulus.register("trip-form", class extends Controller {
             static targets = ["submitBtn", "manifestInput"];
+            static values = { user: String };
 
             connect() {
                 const matrixDataElem = document.getElementById('matrix-data');
                 this.matrixPrices = matrixDataElem ? JSON.parse(matrixDataElem.textContent) : [];
                 this.selectedFiles = [];
+                this.draftReady = false; // don't save until the existing draft has been restored
+                this.draftKey = `cashier-entry-${this.userValue}`;
                 this.element.addEventListener('input', () => this.updateSubmitButton());
-                
+
                 this.toggleScheduleField();
+                this.updateSubmitButton();
+                this.restoreDraft();
+            }
+
+            async restoreDraft() {
+                let draft = null;
+                try {
+                    draft = await getDraft(this.draftKey);
+                } catch (error) {
+                    console.error("Draft load failed:", error);
+                }
+
+                if (draft) {
+                    const setValue = (name) => {
+                        const field = this.element.querySelector(`[name="${name}"]`);
+                        if (field && draft.fields?.[name] != null) field.value = draft.fields[name];
+                    };
+
+                    setValue('start_location');
+                    setValue('campus');
+                    // Schedules depend on the campus, so load them before restoring the schedule
+                    if (draft.fields?.campus) await this.loadSchedules(draft.fields.campus);
+                    ['service_schedule', 'subsidy_type', 'plate_num', 'vehicle', 'capacity'].forEach(setValue);
+
+                    // Passengers re-rendered by the server (e.g. after a failed submit) take priority
+                    const passengersCtrl = this.application.getControllerForElementAndIdentifier(
+                        document.querySelector('[data-controller="passengers"]'), "passengers"
+                    );
+                    if (passengersCtrl && document.querySelectorAll('.passenger-card').length === 0) {
+                        (draft.passengers || []).forEach(p =>
+                            passengersCtrl.renderPassengerCard(p.first_name, p.middle_name, p.last_name, p.cop_id || "")
+                        );
+                    }
+
+                    this.selectedFiles = draft.files || [];
+                    this.renderPhotoPreviews();
+
+                    const notify = this.application.getControllerForElementAndIdentifier(document.getElementById('notification-container'), "notification");
+                    notify?.show("Your unsaved entry was restored", "success");
+                }
+
+                this.draftReady = true;
                 this.updateSubmitButton();
             }
 
+            saveDraft() {
+                if (!this.draftReady) return;
+
+                clearTimeout(this.saveTimer);
+                this.saveTimer = setTimeout(() => {
+                    const fields = {};
+                    DRAFT_FIELDS.forEach(name => {
+                        fields[name] = this.element.querySelector(`[name="${name}"]`)?.value ?? "";
+                    });
+                    const passengers = JSON.parse(this.manifestInputTarget.value || '[]');
+
+                    const isEmpty = passengers.length === 0 && this.selectedFiles.length === 0 &&
+                        DRAFT_FIELDS.every(name => name === 'capacity' ? !fields[name] || fields[name] === '0' : !fields[name]);
+
+                    const request = isEmpty
+                        ? deleteDraft(this.draftKey)
+                        : putDraft(this.draftKey, { fields, passengers, files: this.selectedFiles, savedAt: Date.now() });
+                    request.catch(error => console.error("Draft save failed:", error));
+                }, 300);
+            }
+
+            async clearDraft() {
+                this.draftReady = false;
+                clearTimeout(this.saveTimer);
+                try {
+                    await deleteDraft(this.draftKey);
+                } catch (error) {
+                    console.error("Draft clear failed:", error);
+                }
+            }
+
             async handleCampusChange(event) {
-                const campusId = event.target.value;
+                await this.loadSchedules(event.target.value);
+            }
+
+            async loadSchedules(campusId) {
                 const scheduleSelect = this.element.querySelector('[name="service_schedule"]');
                 const loadingIndicator = document.getElementById('schedule-loading');
 
@@ -356,7 +466,8 @@
 
         if (response.ok) {
             notify?.show(data.message, "success");
-            
+            await this.clearDraft();
+
             setTimeout(() => {
                 window.location.href = "{% url 'cashier_entry' %}";
             }, 2000);
@@ -503,8 +614,12 @@
                     vehicleId !== "" &&
                     hasPhotos;
 
+                // Restored photos aren't in the file input, so only require it when the list is empty
+                if (photoInput) photoInput.required = !hasPhotos;
+
                 this.submitBtnTarget.disabled = !isValid;
                 this.syncManifestData();
+                this.saveDraft();
             }
 
            
@@ -625,12 +740,14 @@ Stimulus.register("passengers", class extends Controller {
 
 // --- Passenger Modal Form Controller (UPDATED) ---
 Stimulus.register("passenger-form", class extends Controller {
-    static targets = ["form", "selectTab", "manualTab", "attendeeList", "searchInput", "selectedCount"];
+    static targets = ["form", "selectTab", "manualTab", "attendeeList", "searchInput", "selectedCount", "selectAllBtn"];
 
     connect() {
         this.attendeesData = [];
+        this.visibleAttendees = [];
         this.selectedAttendees = new Set();
         this.loadAttendees();
+        this.updateSelectedCount();
     }
 
     loadAttendees() {
@@ -643,6 +760,10 @@ Stimulus.register("passenger-form", class extends Controller {
 
     renderAttendeeList(attendees) {
         if (!this.hasAttendeeListTarget) return;
+
+        // Remember what's on screen so "Select All" follows the search filter
+        this.visibleAttendees = attendees;
+        this.updateSelectedCount();
 
         if (attendees.length === 0) {
             this.attendeeListTarget.innerHTML = `
@@ -657,10 +778,12 @@ Stimulus.register("passenger-form", class extends Controller {
             return;
         }
 
-        this.attendeeListTarget.innerHTML = attendees.map(attendee => `
-            <div class="attendee-item mb-2" data-attendee-id="${attendee.id}" data-action="click->passenger-form#toggleAttendee">
+        this.attendeeListTarget.innerHTML = attendees.map(attendee => {
+            const isSelected = this.selectedAttendees.has(String(attendee.id));
+            return `
+            <div class="attendee-item mb-2${isSelected ? ' selected' : ''}" data-attendee-id="${attendee.id}" data-action="click->passenger-form#toggleAttendee">
                 <div class="attendee-checkbox">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display: ${isSelected ? 'block' : 'none'};">
                         <path d="M20 6L9 17l-5-5"/>
                     </svg>
                 </div>
@@ -673,7 +796,8 @@ Stimulus.register("passenger-form", class extends Controller {
                     </div>
                 </div>
             </div>
-        `).join('');
+        `;
+        }).join('');
     }
 
     toggleAttendee(event) {
@@ -698,6 +822,25 @@ Stimulus.register("passenger-form", class extends Controller {
         if (this.hasSelectedCountTarget) {
             this.selectedCountTarget.textContent = this.selectedAttendees.size;
         }
+        if (this.hasSelectAllBtnTarget) {
+            this.selectAllBtnTarget.textContent = this.allVisibleSelected() ? 'Clear All' : 'Select All';
+            this.selectAllBtnTarget.disabled = this.visibleAttendees.length === 0;
+        }
+    }
+
+    allVisibleSelected() {
+        return this.visibleAttendees.length > 0 &&
+            this.visibleAttendees.every(attendee => this.selectedAttendees.has(String(attendee.id)));
+    }
+
+    // Selects (or clears) every member currently shown, respecting the search filter
+    toggleSelectAll() {
+        const selectAll = !this.allVisibleSelected();
+        this.visibleAttendees.forEach(attendee => {
+            const id = String(attendee.id);
+            selectAll ? this.selectedAttendees.add(id) : this.selectedAttendees.delete(id);
+        });
+        this.renderAttendeeList(this.visibleAttendees);
     }
 
     filterAttendees(event) {
@@ -819,186 +962,5 @@ Stimulus.register("passenger-form", class extends Controller {
     }
 });
 
-        // --- Passenger Modal Form Controller (UPDATED) ---
-        Stimulus.register("passenger-form", class extends Controller {
-            static targets = ["form", "selectTab", "manualTab", "attendeeList", "searchInput", "selectedCount"];
-
-            connect() {
-                this.attendeesData = [];
-                this.selectedAttendees = new Set();
-                this.loadAttendees();
-            }
-
-            loadAttendees() {
-                const attendeesDataElem = document.getElementById('attendees-data');
-                if (attendeesDataElem) {
-                    this.attendeesData = JSON.parse(attendeesDataElem.textContent);
-                    this.renderAttendeeList(this.attendeesData);
-                }
-            }
-
-            renderAttendeeList(attendees) {
-                if (!this.hasAttendeeListTarget) return;
-
-                if (attendees.length === 0) {
-                    this.attendeeListTarget.innerHTML = `
-                        <div class="text-center py-5 text-muted">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" class="mb-3 mx-auto" style="opacity: 0.3;">
-                                <path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
-                            </svg>
-                            <p class="fw-bold">No previous passengers found</p>
-                            <p class="small">Add new passengers manually</p>
-                        </div>
-                    `;
-                    return;
-                }
-
-                this.attendeeListTarget.innerHTML = attendees.map(attendee => `
-                    <div class="attendee-item mb-2" data-attendee-id="${attendee.id}" data-action="click->passenger-form#toggleAttendee">
-                        <div class="attendee-checkbox">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
-                                <path d="M20 6L9 17l-5-5"/>
-                            </svg>
-                        </div>
-                        <div class="flex-grow-1">
-                            <div class="fw-bold text-dark" style="font-size: 14px;">
-                                ${attendee.first_name} ${attendee.middle_name} ${attendee.last_name}
-                            </div>
-                            <div class="text-muted" style="font-size: 11px; font-weight: 600;">
-                                Previous Passenger
-                            </div>
-                        </div>
-                    </div>
-                `).join('');
-            }
-
-            toggleAttendee(event) {
-                const item = event.currentTarget;
-                const attendeeId = item.dataset.attendeeId;
-                const checkbox = item.querySelector('.attendee-checkbox svg');
-
-                if (this.selectedAttendees.has(attendeeId)) {
-                    this.selectedAttendees.delete(attendeeId);
-                    item.classList.remove('selected');
-                    checkbox.style.display = 'none';
-                } else {
-                    this.selectedAttendees.add(attendeeId);
-                    item.classList.add('selected');
-                    checkbox.style.display = 'block';
-                }
-
-                this.updateSelectedCount();
-            }
-
-            updateSelectedCount() {
-                if (this.hasSelectedCountTarget) {
-                    this.selectedCountTarget.textContent = this.selectedAttendees.size;
-                }
-            }
-
-            filterAttendees(event) {
-                const searchTerm = event.target.value.toLowerCase();
-                const filtered = this.attendeesData.filter(attendee => {
-                    const fullName = `${attendee.first_name} ${attendee.middle_name} ${attendee.last_name}`.toLowerCase();
-                    return fullName.includes(searchTerm);
-                });
-                this.renderAttendeeList(filtered);
-            }
-
-            addSelectedAttendees() {
-                const notify = this.application.getControllerForElementAndIdentifier(
-                    document.getElementById('notification-container'), "notification"
-                );
-
-                if (this.selectedAttendees.size === 0) {
-                    return notify?.show("Please select at least one passenger", "danger");
-                }
-
-                const passengersCtrl = this.application.getControllerForElementAndIdentifier(
-                    document.querySelector('[data-controller="passengers"]'), "passengers"
-                );
-
-          
-                this.selectedAttendees.forEach(attendeeId => {
-                    const attendee = this.attendeesData.find(a => a.id == attendeeId);
-                    if (attendee) {
-                        passengersCtrl.renderPassengerCard(
-                            attendee.first_name,
-                            attendee.middle_name,
-                            attendee.last_name,
-                             attendee.cop_id ? attendee.cop_id.toString() : ""
-                        );
-                    }
-                });
-
-                const modalInstance = bootstrap.Modal.getInstance(document.getElementById('passengerModal'));
-                modalInstance.hide();
-
-                this.selectedAttendees.clear();
-                this.updateSelectedCount();
-                document.querySelectorAll('.attendee-item').forEach(item => {
-                    item.classList.remove('selected');
-                    item.querySelector('.attendee-checkbox svg').style.display = 'none';
-                });
-
-                notify?.show(`${this.selectedAttendees.size || 'Passengers'} added`, "success");
-            }
-
-            submitManual() {
-                const firstInput = this.element.querySelector('[name*="first_name"]');
-                const middleInput = this.element.querySelector('[name*="middle_name"]');
-                const lastInput = this.element.querySelector('[name*="last_name"]');
-                const copIdInput = this.element.querySelector('#id_cop_id'); 
-
-                const first = firstInput?.value.trim();
-                const middle = middleInput?.value.trim();
-                const last = lastInput?.value.trim();
-                const copId = copIdInput?.value ? copIdInput.value.toString().trim() : "";
-
-                const notify = this.application.getControllerForElementAndIdentifier(
-                    document.getElementById('notification-container'), "notification"
-                );
-
-                if (!first || !last) {
-                    return notify?.show("Please enter both first and last names", "danger");
-                }
-
-                if (copId !== "" && copId.length !== 6) {
-                    return notify?.show("COP ID must be exactly 6 digits", "danger");
-                }
-
-                // 4. Set display fallback for the UI card
-                const displayCopId = copId || "";
-
-                const passengersCtrl = this.application.getControllerForElementAndIdentifier(
-                    document.querySelector('[data-controller="passengers"]'), "passengers"
-                );
-                passengersCtrl.renderPassengerCard(first, middle, last, displayCopId);
-                
-                const modalInstance = bootstrap.Modal.getInstance(document.getElementById('passengerModal'));
-                if (modalInstance) modalInstance.hide();
-                
-                [firstInput, middleInput, lastInput, copIdInput].forEach(input => {
-                    if (input) input.value = '';
-                });
-
-                notify?.show(`Passenger added`, "success");
-            }
-
-            showTab(event) {
-                const targetTab = event.currentTarget.dataset.tab;
-                
-                document.querySelectorAll('.tab-pill').forEach(pill => pill.classList.remove('active'));
-                event.currentTarget.classList.add('active');
-
-                if (targetTab === 'select') {
-                    this.selectTabTarget.style.display = 'block';
-                    this.manualTabTarget.style.display = 'none';
-                } else {
-                    this.selectTabTarget.style.display = 'none';
-                    this.manualTabTarget.style.display = 'block';
-                }
-            }
-        });
     </script>
 {% endblock %}

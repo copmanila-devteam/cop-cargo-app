@@ -156,7 +156,7 @@
 
                 <div style="max-width: 120px;">
 
-                    <form action="{% url 'logout-cargo' %}" method="post" class="m-0">
+                    <form action="{% url 'logout-cargo' %}" method="post" class="m-0" id="logout-form">
 
                         {% csrf_token %}
 
@@ -167,6 +167,23 @@
                         </button>
 
                     </form>
+
+                    <script>
+                        // Remove any unsubmitted cashier entry draft (see cargo_form.html) before logging out
+                        document.getElementById('logout-form').addEventListener('submit', function (event) {
+                            event.preventDefault();
+                            const form = this;
+                            let submitted = false;
+                            const proceed = () => { if (!submitted) { submitted = true; form.submit(); } };
+                            try {
+                                const request = indexedDB.deleteDatabase('cop-cargo-drafts');
+                                request.onsuccess = request.onerror = request.onblocked = proceed;
+                            } catch (error) {
+                                proceed();
+                            }
+                            setTimeout(proceed, 1500);
+                        });
+                    </script>
 
                 </div>
 

@@ -13,6 +13,10 @@ class Event(models.Model):
     description = models.CharField(max_length=200)
     start_date = models.DateField()
     end_date = models.DateField()
+    priority = models.PositiveIntegerField(
+        default=0,
+        help_text="Higher number = higher priority"
+    ) # This field will designate the level of priority in the selection of Events, if any same day events occur
 
     def __str__(self):
         return self.name

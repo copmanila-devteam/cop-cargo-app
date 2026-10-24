@@ -1,4 +1,4 @@
-
+from django.utils import timezone
 
 from django import forms
 
@@ -16,7 +16,7 @@ from django import forms
 
 from django.core.exceptions import ValidationError
 
-from django.db.models import Q
+from django.db.models import Q, F
 
 from .models import Cashier, Attendees, Event, SubsidyType,Campus, Vehicle, ServiceSchedule, City
 
@@ -40,7 +40,7 @@ class MultipleFileInput(forms.ClearableFileInput):
 
 class CashierEntryForm(forms.ModelForm):
     events = forms.ModelChoiceField(
-        queryset=Event.objects.all(),
+        queryset=Event.objects.none(),
         required=True,
         widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_events'})
     )
@@ -131,7 +131,6 @@ class CashierEntryForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
         # Filters schedules based on campus during form validation
-
         if 'campus' in self.data:
 
             try:
@@ -140,6 +139,24 @@ class CashierEntryForm(forms.ModelForm):
 
             except (ValueError, TypeError):
                 self.fields['service_schedule'].queryset = ServiceSchedule.objects.none()
+
+        # Adding this new line to specify the target Event against the system time
+        today = timezone.localdate()
+
+        # Dropdown order: highest priority first, then soonest start
+        event_queryset = Event.objects.filter(start_date__lte=today, end_date__gte=today).order_by('priority', 'start_date')
+        self.fields['events'].queryset =  event_queryset
+
+        print(f'Date today: {today}')
+
+        current_event = (
+            event_queryset
+            .filter(start_date__lte=today, end_date__gte=today)
+            .first()
+        )
+
+        if current_event:
+            self.fields['events'].initial = current_event.pk
 
 
 

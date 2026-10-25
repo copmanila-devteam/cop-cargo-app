@@ -366,7 +366,12 @@
                     // Reflect the saved remark, its time and its author right in the dialog
                     roleRemarks.value = { ...roleRemarks.value, [result.role]: result.remark }
                     roleDrafts.value[result.role] = result.remark.description
-                    $q.notify({ type: 'positive', message: 'Remark saved' })
+                    showRemarks.value = false
+                    $q.notify({
+                        type: 'positive',
+                        position: 'top',
+                        message: `Remark has been successfully updated.`
+                    })
                 } catch (err) {
                     showError('Failed to save remarks: ' + err.message)
                 } finally {

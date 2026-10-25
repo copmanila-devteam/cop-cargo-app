@@ -421,7 +421,7 @@
                 }
 
                 const base = `${campusName} | ${scheduleDay} ${timeStr ?? ''}`.trim()
-                return d.event ? `Special Event: ${d.event} | ${base}` : base
+                return d.event
             })
 
             const statusColor = computed(() => status.value.color)

@@ -47,8 +47,8 @@
                 <span class="detail-value">[[ selectedRow.campus?.name ]]</span>
             </div>
             <div class="detail-item">
-                <span class="detail-label">Type of Event or Service</span>
-                <span class="detail-value">[[ selectedRow.event ? `Special Event: ${selectedRow.event}` : 'Regular Service' ]]</span>
+                <span class="detail-label">Vehicle</span>
+                <span class="detail-value">[[ selectedRow.vehicle ? selectedRow.vehicle.name : 'N/A' ]]</span>
             </div>
             <div class="detail-item">
                 <span class="detail-label">Subsidy Type</span>
@@ -58,10 +58,7 @@
                 <span class="detail-label">Service Schedule</span>
                 <span class="detail-value" style="color: #667eea; font-weight: 700;">[[ formattedSchedule ]]</span>
             </div>
-            <div class="detail-item">
-                <span class="detail-label">Vehicle</span>
-                <span class="detail-value">[[ selectedRow.vehicle ? selectedRow.vehicle.name : 'N/A' ]]</span>
-            </div>
+            
             <div class="detail-item">
                 <span class="detail-label">Plate Number</span>
                 <span><q-chip color="green" >[[ selectedRow.plate_num || 'N/A' ]]</q-chip></span>

@@ -221,3 +221,10 @@ __marimo__/
 /media/cashier_photos
 
 migrations/
+*.bat
+/backup
+/backups
+
+/db_archive
+cashier/cargo_list.xlsx
+remarks_list_tracker.xlsx

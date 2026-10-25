@@ -28,6 +28,17 @@
         <select id="campuses" name="campuses" data-action="change->cashier-table#filterCargoData">
             <option value="All">All</option>
         </select>
+
+        <!-- 20261022: Regular / Special Event filter, sent to /api/list/ as ?service_type= or ?event= -->
+        <label for="serviceType" class="ms-3">Filter Service:</label>
+        <select id="serviceType" name="serviceType" data-action="change->cashier-table#filterCargoData">
+            <option value="">All Services</option>
+            <option value="regular">Regular Services</option>
+            <option value="special">Special Events (All)</option>
+            {% for e in service_events %}
+            <option value="event:{{ e.id }}">{{ e.name }}</option>
+            {% endfor %}
+        </select>
         <!-- <button class="btn btn-success" data-action="click->cashier-table#filterCargoData"  type="submit">Filter</button> -->
     </form>
 
@@ -134,7 +145,6 @@
 
 
         filterCargoData() {
-
             const campus_data = $('#campuses').val();
             console.log(campus_data)
 
@@ -145,12 +155,21 @@
             }
             else {
                 this.loadCashiers(campus_data)
-
             }
-
-
         }
 
+
+        // "regular" / "special" -> ?service_type=, "event:<id>" -> ?event=<id>
+        serviceTypeQuery() {
+            const value = $('#serviceType').val() || '';
+            const params = new URLSearchParams();
+            if (value.startsWith('event:')) {
+                params.set('event', value.split(':')[1]);
+            } else if (value) {
+                params.set('service_type', value);
+            }
+            return params.toString();
+        }
 
         async getCampuses() {
             try {
@@ -186,7 +205,7 @@
             try {
                 // const response = await fetch(`/api/list/${id}`);
                 const url = id ? `/api/list/${id}` : '/api/list/';
-                const response = await fetch(url);
+                const response = await fetch(`${url}?${this.serviceTypeQuery()}`);
                 const data = await response.json();
                 console.log(data)
 
@@ -367,6 +386,7 @@
                             <tr><td class="text-muted">Destination:</td><td>${d.campus || 'N/A'}</td></tr>
                             <tr><td class="text-muted">Date:</td><td>${formatDate(d.date) || 'N/A'}</td></tr>
                             <tr><td class="text-muted">Service Schedule:</td><td>${d.service_schedule || 'N/A'}</td></tr>
+                            <tr><td class="text-muted">Service Type:</td><td>${d.event ? `<span class="badge bg-warning text-dark">Special Event</span> ${d.event}` : 'Regular Service'}</td></tr>
                             <tr><td class="text-muted">Vehicle:</td><td>${d.vehicle || 'N/A'}</td></tr>
                             <tr><td class="text-muted">Plate Number:</td><td>${d.plate_num || 'N/A'}</td></tr>
                             <tr><td class="text-muted">Subsidy Type:</td><td>${d.subsidy_type || 'N/A'}</td></tr>

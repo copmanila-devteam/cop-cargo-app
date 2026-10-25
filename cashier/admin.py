@@ -2,11 +2,19 @@ from django.contrib import admin
 
 from .models import Vehicle, Campus, Attendees, Cashier, CashierUsers, City, SubsidyType, Matrix, ServiceSchedule, CashierImage, LeadersAttendees, CargoDetails, Voucher
 from .models import Event, RemarksList
+from .forms import area_priority, campus_is, city_is
+from django.db.models.functions import Lower
 
 @admin.register(Event)
 class EventAdmin(admin.ModelAdmin):
-    list_display = ['name', 'campus__name', 'start_date', 'end_date', 'description']
+    list_display = ['name', 'get_campus', 'start_date', 'end_date', 'priority', 'description']
     search_fields = ['name', 'campus__name', 'start_date', 'end_date', 'description']
+    list_filter = ['campus']
+
+    def get_campus(self, obj):
+        return obj.campus.name if obj.campus else 'All Campuses'
+    get_campus.short_description = 'Campus'
+    get_campus.admin_order_field = 'campus__name'
 
 @admin.register(RemarksList)
 class RemarksListAdmin(admin.ModelAdmin):
@@ -31,7 +39,9 @@ class ServiceSchedAdmin(admin.ModelAdmin):
 
     list_display = ['campus', 'time', 'days']
 
-    search_fields = ['campus']
+    list_filter = ['campus']
+
+    search_fields = ['campus__name']
 
 
 
@@ -59,6 +69,10 @@ class CampusAdmin(admin.ModelAdmin):
 
     search_fields = ['name']
 
+    # Also used by every Campus dropdown and filter in the admin
+    def get_ordering(self, request):
+        return [area_priority(campus_is), Lower('name')]
+
 
 
 
@@ -67,6 +81,10 @@ class CampusAdmin(admin.ModelAdmin):
 class CityAdmin(admin.ModelAdmin):
     list_display = ['name']
     search_fields = ['name']
+
+    # Also used by every Origin/City dropdown and filter in the admin
+    def get_ordering(self, request):
+        return [area_priority(city_is), Lower('name')]
 
 
 
@@ -202,7 +220,7 @@ class CashierAdmin(admin.ModelAdmin):
 
     
 
-    list_filter = ['date', 'campus', 'vehicle']
+    list_filter = ['date', 'campus', 'vehicle', 'event']
 
     
 
@@ -245,9 +263,11 @@ class CashierAdmin(admin.ModelAdmin):
 
         'subsidy_type', 
 
-        'service_schedule', 
+        'service_schedule',
 
-        'time_arrived', 
+        'event',
+
+        'time_arrived',
 
         'approved_by',
 

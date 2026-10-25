@@ -14,8 +14,8 @@ from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.http import require_http_methods
 from datetime import datetime, timedelta, date
-from .forms import CashierEntryForm, PassengerForm, ReportFilterForm, ReportDateRangeFilterForm
-from .models import Cashier, Attendees, Matrix, ServiceSchedule, CashierImage, Voucher, CargoDetails, LeadersAttendees, Campus
+from .forms import CashierEntryForm, PassengerForm, ReportFilterForm, ReportDateRangeFilterForm, area_priority, campus_is
+from .models import Cashier, Attendees, Matrix, ServiceSchedule, CashierImage, Voucher, CargoDetails, LeadersAttendees, Campus, Event
 from Account.auth import Usertype
 from Account.models import UserType
 from django.contrib.auth.decorators import login_required
@@ -24,7 +24,8 @@ from django.db import transaction # Required to fix your error
 from django.views.decorators.http import require_POST, require_GET
 from django.utils import timezone
 from decimal import Decimal
-from django.db.models import Count, Q
+from django.db.models import Count, Q, F
+from django.db.models.functions import Lower
 from django.utils.decorators import method_decorator
 from django.utils import timezone as django_timezone
 from django.http import HttpResponse
@@ -36,7 +37,7 @@ from openpyxl.worksheet.table import Table, TableStyleInfo
 import openpyxl
 import secrets
 from .remarks_views import get_role_remarks
-from .utils import events_for_campus
+from .utils import schedules_for_campus, event_for_campus, event_day_codes, days_until
 
 
 
@@ -54,26 +55,61 @@ def page_500_view(request):
 
 
 def get_schedules(request):
-    campus_id = request.GET.get('campus_id')
-    # Use select_related to make the database query faster
-    schedules = ServiceSchedule.objects.filter(campus_id=campus_id).select_related('campus')
-    
+    try:
+        campus_id = int(request.GET.get('campus_id'))
+    except (TypeError, ValueError):
+        return JsonResponse([], safe=False)
+
+    # If an Event runs on this campus today, the schedules on its remaining days are labelled with it and listed first
+    today = timezone.localdate()
+    event = event_for_campus(campus_id, today)
+    event_days = event_day_codes(event, today) if event else set()
+    # Don't double the prefix for events already named "Special Event: ..."
+    event_label = event and (event.name if event.name.lower().startswith('special event') else f"Special Event: {event.name}")
+
+    # Chronological from today: today's schedules first, then the next days', each by time.
+    # The event's remaining days start today, so its schedules come first.
+    schedules = sorted(
+        schedules_for_campus(campus_id),
+        key=lambda s: (days_until(s.days, today), s.time),
+    )
+
     data = []
     for s in schedules:
-        # %I:%M %p converts 15:00:00 to 03:00 PM
-        formatted_time = s.time.strftime("%I:%M %p")
-        
-        # Construct the string: Campus | Day | Time
-        # Using getattr handles cases where campus might be None
-        campus_name = s.campus.name if s.campus else "Unknown Campus"
-        display_text = f"{campus_name} | {s.get_days_display()} | {formatted_time}"
-        
+        is_special = s.days in event_days
         data.append({
-            'id': s.id, 
-            'name': display_text
+            'id': s.id,
+            'name': f"{event_label} | {s}" if is_special else str(s),
+            'is_special': is_special,
         })
-        
+
     return JsonResponse(data, safe=False)
+
+
+def filter_by_service_type(queryset, request):
+    """Reporting filter for approvers: ?service_type=special|regular and/or ?event=<event id>"""
+    service_type = request.GET.get('service_type')
+    if service_type == 'special':
+        queryset = queryset.filter(event__isnull=False)
+    elif service_type == 'regular':
+        queryset = queryset.filter(event__isnull=True)
+
+    event_id = request.GET.get('event')
+    if event_id and event_id.isdigit():
+        queryset = queryset.filter(event_id=int(event_id))
+
+    return queryset
+
+
+def service_event_options():
+    """Events for the approvers' Regular / Special Event filter: dated events or ones with submitted trips"""
+    # 'event' is the reverse name of Cashier.event
+    return list(
+        Event.objects.filter(Q(start_date__isnull=False) | Q(event__isnull=False))
+        .distinct()
+        .order_by(F('start_date').desc(nulls_last=True), 'name')
+        .values('id', 'name')
+    )
 
 
 class BookingHistoryView(LoginRequiredMixin, TemplateView):
@@ -334,6 +370,8 @@ class CargoView(LoginRequiredMixin, TemplateView):
                        
                         cashier.leader = request.user
                         cashier.date = date.today()
+                        # The Event running on this campus today, if any; regular services leave this empty
+                        cashier.event = event_for_campus(cashier.campus_id, cashier.date)
                         now = timezone.now()
                         cashier.time_arrived = now
                         
@@ -520,6 +558,7 @@ class VoucherView(LoginRequiredMixin, TemplateView):
                     }
                 json_data_list.append( {
                     'service_schedule': service_schedule_data,
+                    'event': data.cashier.event.name if data.cashier.event else None,
                     'arrival_time':data.cashier.time_arrived.isoformat() if data.cashier.time_arrived else None,
                     'voucher':data.voucher_code,
                 })
@@ -815,7 +854,7 @@ class CashierView(LoginRequiredMixin, View):
                 Cashier.objects
                 .select_related(
                     'leader', 'campus', 'subsidy_type', 'vehicle',
-                    'start_location', 'approved_by', 'service_schedule'
+                    'start_location', 'approved_by', 'service_schedule', 'event'
                 )
                 .prefetch_related('images')  # leader removed from here
                 .annotate(image_count=Count('images'))
@@ -825,6 +864,8 @@ class CashierView(LoginRequiredMixin, View):
 
             if user.campus.name != "Main Campus":
                 base_qs = base_qs.filter(campus=user.campus)
+
+            base_qs = filter_by_service_type(base_qs, request)
 
             # Evaluate queryset once
             cashiers = list(base_qs)
@@ -872,6 +913,8 @@ class CashierView(LoginRequiredMixin, View):
                     'voucher': voucher_map.get(cashier.id, 'N/A'),
                     'is_late': is_late,
                     'remarks': cashier.remarks,
+                    'service_schedule': str(cashier.service_schedule) if cashier.service_schedule else None,
+                    'event': cashier.event.name if cashier.event else None,
                     'image_count': cashier.image_count,  # from annotation
                     'completed': cashier.completed,
                 })
@@ -972,6 +1015,7 @@ class CashierView(LoginRequiredMixin, View):
                 'subsidy_type': {'name': cashier.subsidy_type.name} if cashier.subsidy_type else None,
 
                 'service_schedule': service_schedule_data,
+                'event': cashier.event.name if cashier.event else None,
 
                 'plate_num': cashier.plate_num,
 
@@ -1050,8 +1094,15 @@ class AccountingView(LoginRequiredMixin, View):
             return self.get_cashier_list(request)
 
         form = ReportDateRangeFilterForm()
-        campuses = list(Campus.objects.order_by('name').values('id', 'name'))
-        return render(request, 'Accountant/index-2.html', {'form': form, 'campuses': campuses})
+        campuses = list(Campus.objects.annotate(
+            priority=area_priority(campus_is),
+            lower_name=Lower('name'),
+        ).order_by('priority', 'lower_name').values('id', 'name'))
+        return render(request, 'Accountant/index-2.html', {
+            'form': form,
+            'campuses': campuses,
+            'service_events': service_event_options(),
+        })
 
     def post(self, request, id=None, *args, **kwargs):
         form = ReportDateRangeFilterForm(request.POST)
@@ -1127,7 +1178,7 @@ class AccountingView(LoginRequiredMixin, View):
                 Cashier.objects
                 .select_related(
                     'leader', 'campus', 'subsidy_type', 'vehicle',
-                    'start_location', 'approved_by', 'service_schedule'
+                    'start_location', 'approved_by', 'service_schedule', 'event'
                 )
                 .prefetch_related('images')  # leader removed from here
                 .annotate(image_count=Count('images'))
@@ -1137,6 +1188,8 @@ class AccountingView(LoginRequiredMixin, View):
 
             if user.campus.name != 'Campus Main':
                 base_qs = base_qs.filter(campus=user.campus)
+
+            base_qs = filter_by_service_type(base_qs, request)
 
             # Evaluate queryset once
             cashiers = list(base_qs)
@@ -1184,6 +1237,8 @@ class AccountingView(LoginRequiredMixin, View):
                     'voucher': voucher_map.get(cashier.id, 'N/A'),
                     'is_late': is_late,
                     'remarks': cashier.remarks,
+                    'service_schedule': str(cashier.service_schedule) if cashier.service_schedule else None,
+                    'event': cashier.event.name if cashier.event else None,
                     'image_count': cashier.image_count,  # from annotation
                     'completed': cashier.completed,
                 })
@@ -1284,6 +1339,7 @@ class AccountingView(LoginRequiredMixin, View):
                 'subsidy_type': {'name': cashier.subsidy_type.name} if cashier.subsidy_type else None,
 
                 'service_schedule': service_schedule_data,
+                'event': cashier.event.name if cashier.event else None,
 
                 'plate_num': cashier.plate_num,
 
@@ -1426,7 +1482,7 @@ class cashier_list(LoginRequiredMixin,TemplateView):
 
         
 
-        return render(request, self.template_name)
+        return render(request, self.template_name, {'service_events': service_event_options()})
 
                  
    
@@ -1466,8 +1522,9 @@ class PastorApprovals(LoginRequiredMixin, View):
                     'approved_by',
                     'leader'
                 ).prefetch_related('images', 'leader').all()
-            
-            
+
+            all_cashiers = filter_by_service_type(all_cashiers.select_related('service_schedule', 'event'), request)
+
             pending_cashiers = all_cashiers.filter(approved_by__isnull=True, rejected=False).order_by('-time_arrived')
             
 
@@ -1517,6 +1574,7 @@ class PastorApprovals(LoginRequiredMixin, View):
                     'plate_num': cashier.plate_num,
                     'subsidy_type': str(cashier.subsidy_type) if cashier.subsidy_type else None,
                     'service_schedule': str(cashier.service_schedule) if cashier.service_schedule else None,
+                    'event': cashier.event.name if cashier.event else None,
                     'time_arrived': time_arrived_str,
                     'remarks': cashier.remarks,
                     'approved_by': f"{cashier.approved_by.first_name} {cashier.approved_by.last_name}" if cashier.approved_by else None,
@@ -2168,14 +2226,3 @@ def getcampuses(request):
         return JsonResponse({'status':'success', 'campus':user.campus.name,'id': user.campus.id})
     except Exception as e:
         return JsonResponse({'status':'error', 'message':str(e)})
-
-# 20261020: To trigger the fetching of Events based on chosen campus
-@login_required
-def load_events(request):
-    try:
-        campus_id = int(request.GET.get('campus_id'))
-    except (TypeError, ValueError):
-        campus_id = None
-
-    events = [{'id': e.pk, 'name': str(e)} for e in events_for_campus(campus_id)]
-    return JsonResponse({'events': events})

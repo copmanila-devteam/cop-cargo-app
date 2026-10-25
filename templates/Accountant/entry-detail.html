@@ -47,6 +47,10 @@
                 <span class="detail-value">[[ selectedRow.campus?.name ]]</span>
             </div>
             <div class="detail-item">
+                <span class="detail-label">Type of Event or Service</span>
+                <span class="detail-value">[[ selectedRow.event ? `Special Event: ${selectedRow.event}` : 'Regular Service' ]]</span>
+            </div>
+            <div class="detail-item">
                 <span class="detail-label">Subsidy Type</span>
                 <span class="detail-value">[[ selectedRow.subsidy_type?.name ]]</span>
             </div>

@@ -968,7 +968,6 @@
             </div>
             <div class="header-actions">
                 <button class="refresh-btn" data-action="click->cashier#refresh">🔄 Refresh Data</button>
-                
                 <form action="{% url 'logout-cargo' %}" method="post" style="margin: 0;">
                     {% csrf_token %}
                     <button class="logout-btn" type="submit">Logout</button>

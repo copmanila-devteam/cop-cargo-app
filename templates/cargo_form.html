@@ -46,13 +46,9 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">{{ form.campus.label }}</label>
-                                <div data-action="change->trip-form#handleCampusChange change->trip-form#filterEvents">
+                                <div data-action="change->trip-form#handleCampusChange">
                                     {{ form.campus }}
                                 </div>
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label">{{ form.events.label }}</label>
-                                {{ form.events }}
                             </div>
                             <div class="col-12">
                                 <label class="form-label">{{ form.service_schedule.label }}</label>
@@ -283,18 +279,6 @@
                 this.updateSubmitButton();
             }
 
-            async filterEvents(event) {
-  const campusId = event.target.value
-  const select = this.element.querySelector('#id_events')
-
-  const response = await fetch(`/api/get-events/?campus_id=${campusId}`)
-  const { events } = await response.json()
-
-  select.innerHTML = ''
-  events.forEach(e => select.add(new Option(e.name, e.id)))
-  // First option is the top-priority event, so it ends up selected by default
-}
-
             async handleCampusChange(event) {
                 const campusId = event.target.value;
                 const scheduleSelect = this.element.querySelector('[name="service_schedule"]');
@@ -317,7 +301,8 @@
                     const response = await fetch(`/api/get-schedules/?campus_id=${campusId}`);
                     const data = await response.json();
 
-                    scheduleSelect.innerHTML = '<option value="">---------</option>';
+                    scheduleSelect.innerHTML = '<option value="">Select Service Schedule</option>';
+                    // Special Event schedules come first from the server, already labelled
                     data.forEach(item => {
                         const option = document.createElement('option');
                         option.value = item.id;

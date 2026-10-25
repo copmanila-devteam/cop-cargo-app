@@ -18,9 +18,35 @@ from django.core.exceptions import ValidationError
 
 from django.db.models import Q, F
 
-from .models import Cashier, Attendees, Event, SubsidyType,Campus, Vehicle, ServiceSchedule, City
+from .models import Cashier, Attendees, SubsidyType,Campus, Vehicle, ServiceSchedule, City
 
-from .utils import events_for_campus
+from .utils import schedules_for_campus
+
+from django.db.models import Case, When, Value, IntegerField
+from django.db.models.functions import Lower
+
+
+# Main, South, East and North go first in the campus and origin dropdowns; the rest follow A-Z.
+AREA_ORDER = ('Main', 'South', 'East', 'North')
+
+
+def area_priority(match):
+    return Case(
+        *[When(match(area), then=Value(rank)) for rank, area in enumerate(AREA_ORDER)],
+        default=Value(len(AREA_ORDER)),
+        output_field=IntegerField(),
+    )
+
+
+def campus_is(area):
+    # "Main", "Campus Main" or "Main Campus"
+    return Q(name__iexact=area) | Q(name__iexact=f'Campus {area}') | Q(name__iexact=f'{area} Campus')
+
+
+def city_is(area):
+    # "Main" or "Main (Tondo)"
+    return Q(name__iexact=area) | Q(name__istartswith=f'{area} (')
+
 
 
 
@@ -39,17 +65,11 @@ class MultipleFileInput(forms.ClearableFileInput):
 
 
 class CashierEntryForm(forms.ModelForm):
-    events = forms.ModelChoiceField(
-        queryset=Event.objects.none(),
-        required=True,
-        label='Event / Service',
-        empty_label='Select Event or Service',
-        widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_events'})
-    )
-
+    # 20261022: Special Events are now part of the Service Schedule options (see schedules_for_campus)
     service_schedule = forms.ModelChoiceField(
-        queryset=ServiceSchedule.objects.all(),
+        queryset=ServiceSchedule.objects.none(),
         required=True,
+        label='Service Schedule',
         empty_label='Select Service Schedule',
         widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_service_schedule'})
     )
@@ -57,9 +77,12 @@ class CashierEntryForm(forms.ModelForm):
     campus = forms.ModelChoiceField(
         required=True,
         empty_label='Select COP campus',
-        queryset=Campus.objects.all(),
+        queryset=Campus.objects.annotate(
+            priority=area_priority(campus_is),
+            lower_name=Lower('name'),
+        ).order_by('priority', 'lower_name'),
         widget=forms.Select(attrs={
-            'class': 'form-control', 
+            'class': 'form-control',
             'id': 'id_campus'
         })
     )
@@ -68,7 +91,10 @@ class CashierEntryForm(forms.ModelForm):
         required=True,
         empty_label='Select Origin',
         label='Origin',
-        queryset=City.objects.all(),
+        queryset=City.objects.annotate(
+            priority=area_priority(city_is),
+            lower_name=Lower('name'),
+        ).order_by('priority', 'lower_name'),
         widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_start_location'}),
     )
 
@@ -121,7 +147,7 @@ class CashierEntryForm(forms.ModelForm):
         model = Cashier
         # DO NOT put 'photos' in this list
 
-        fields = ['start_location', 'campus', 'events', 'capacity','service_schedule', 'vehicle', 'subsidy_type', 'plate_num']
+        fields = ['start_location', 'campus', 'capacity','service_schedule', 'vehicle', 'subsidy_type', 'plate_num']
 
         widgets = {
             'plate_num': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex. ABC 123'}),
@@ -131,7 +157,7 @@ class CashierEntryForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
         # FIX: Remove Service Schedule among the list of Campus
-        self.fields['campus'].queryset = Campus.objects.exclude(name='Special Event')
+        self.fields['campus'].queryset = self.fields['campus'].queryset.exclude(name='Special Event')
 
         campus_id = None
         if self.data.get('campus'):
@@ -140,16 +166,10 @@ class CashierEntryForm(forms.ModelForm):
             except (ValueError, TypeError):
                 campus_id = None
 
+        # Only this campus' schedules can be submitted
         if campus_id:
-            self.fields['service_schedule'].queryset = ServiceSchedule.objects.filter(campus_id=campus_id)
+            self.fields['service_schedule'].queryset = schedules_for_campus(campus_id)
 
-            event_queryset = events_for_campus(campus_id)
-            self.fields['events'].queryset = event_queryset
-
-            current_event = event_queryset.first()
-            if current_event:
-                self.fields['events'].initial = current_event.pk
-            
 
 
 

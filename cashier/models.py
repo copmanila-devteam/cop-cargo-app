@@ -15,7 +15,7 @@ class Vehicle(models.Model):
 
     """Vehicle model for different types of vehicles"""
 
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, null=True, blank=True)
 
     peso_price = models.DecimalField(max_digits=10, decimal_places=2)
 
@@ -68,7 +68,12 @@ class Event(models.Model):
     description = models.TextField(max_length=200, null=True, blank=True) # FIX 10/19/2026: Updated the field type for description from Char to Texts
     start_date = models.DateField(null=True, blank=True) 
     end_date = models.DateField(null=True, blank=True)
-    campus = models.ForeignKey(Campus, null=True, blank=True, on_delete=models.SET_NULL, related_name='campus')
+    # 20261023: No campus = every campus. Trips to the campus between Start Date and End Date
+    # (or on Start Date only if there's no End Date) are tagged with this Event.
+    campus = models.ForeignKey(
+        Campus, null=True, blank=True, on_delete=models.SET_NULL, related_name='events',
+        help_text="Leave blank to run this event on every campus."
+    )
     priority = models.PositiveIntegerField(
         default=0,
         help_text="Higher number = higher priority"
@@ -212,7 +217,8 @@ class ServiceSchedule(models.Model):
 
         formatted_time = self.time.strftime("%I:%M %p")
 
-        return f"{self.campus.name} | {self.get_days_display()} | {formatted_time}"
+        campus_name = self.campus.name if self.campus else "Unknown Campus"
+        return f"{campus_name} | {self.get_days_display()} | {formatted_time}"
 
 
 
@@ -271,7 +277,8 @@ class Cashier(models.Model):
     service_schedule = models.ForeignKey(ServiceSchedule, on_delete=models.CASCADE, null=True, blank=True, related_name='service_schedule')
     time_arrived = models.DateTimeField(default=timezone.now, null=True)
     remarks = models.CharField(max_length=300, blank=True)
-    event = models.ForeignKey(Event, on_delete=models.SET_NULL, null=True, related_name='event')
+    # The Event running on service_schedule on the trip date, so approvers can filter Special Event trips for reporting
+    event = models.ForeignKey(Event, on_delete=models.SET_NULL, null=True, blank=True, related_name='event')
 
     class Meta:
         db_table = 'cashier'
